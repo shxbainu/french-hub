@@ -141,7 +141,15 @@ h2 { font: 700 1.5rem/1.2 'Cormorant Garamond', Georgia, serif; margin: 0 0 0.65
 .note-box { border-radius: 0.75rem; padding: 0.8rem 1rem; margin: 0.75rem 0; background: rgb(var(--sunken)); line-height: 1.55; }
 .note-box b { font-weight: 800; }
 .retype { margin: 0.9rem 0 0.4rem; padding: 1rem; border: 2px dashed rgb(var(--warm) / 0.55); border-radius: 0.75rem; background: rgb(var(--warm-soft) / 0.5); }
-.retype label { color: rgb(var(--warm)); }
+.formgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 0.65rem; }
+.formgrid .field.m label { color: rgb(var(--gm)); } .formgrid .field.f label { color: rgb(var(--gf)); }
+.result-grid { margin: 0.6rem 0; }
+.result-grid .cell { border-radius: 0.6rem; padding: 0.5rem 0.75rem; background: rgb(var(--sunken)); border: 2px solid transparent; }
+.result-grid .cell.ok { border-color: rgb(var(--good) / 0.35); } .result-grid .cell.no { border-color: rgb(var(--bad) / 0.45); background: rgb(var(--bad-soft) / 0.5); }
+.result-grid .cell.acc { border-color: rgb(var(--warm) / 0.5); }
+.result-grid small { display: block; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: rgb(var(--muted)); }
+.result-grid .gold { font-size: 1.6rem; margin: 0.1rem 0 0; }
+.retype-title { font-size: 0.85rem; font-weight: 700; color: rgb(var(--warm)); margin-bottom: 0.5rem; }
 .score-row { display: flex; flex-wrap: wrap; gap: 2rem; }
 .score-row b { display: block; font-size: 2.2rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 .trophy { width: 3.6rem; height: 3.6rem; border-radius: 1rem; display: grid; place-items: center; background: rgb(var(--warm-soft)); color: rgb(var(--warm)); }
@@ -379,20 +387,38 @@ window.addEventListener('hashchange', () => go(location.hash.slice(1)));
 window.addEventListener('keydown', (e) => { if (keyHandler && !e.metaKey && !e.ctrlKey && !e.altKey) keyHandler(e); });
 
 /* ---------- one question card ---------- */
-const KIND = { 'fr-en': 'French → English', 'en-fr': 'English → French', forms: 'Forms', sent: 'Sentence', phrase: 'Phrase', place: 'Word order', bel: 'bel · nouvel · vieil', de: 'de or des', hair: 'Hair' };
-// onDone({ ok, q }) fires when the learner moves on. A miss on a typed answer has to be typed again correctly first.
+const KIND = { 'fr-en': 'French → English', 'en-fr': 'English → French', forms: 'One form', all: 'All forms', sent: 'Sentence', phrase: 'Phrase', place: 'Word order', bel: 'bel · nouvel · vieil', de: 'de or des', hair: 'Hair' };
+const SHORT = { 'masculine singular': 'masc.', 'feminine singular': 'fem.', 'masculine plural': 'masc. pl.', 'feminine plural': 'fem. pl.', 'before a vowel': 'before a vowel' };
+const textInput = (lang, id, extra) => h('input.answer' + (lang === 'fr' ? '.fr' : ''), { type: 'text', id, autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', lang, ...extra });
+// Accent buttons type into whichever box was last focused.
+let lastBox = null;
+document.addEventListener('focusin', (e) => { if (e.target.matches && e.target.matches('input.answer')) lastBox = e.target; });
+const accentKeys = () => h('div.keys', { 'aria-label': 'Accented letters' }, ['é', 'è', 'ê', 'à', 'â', 'ç', 'ï', 'î', 'ô', 'û'].map((c) => h('button', { type: 'button', tabindex: '-1', onmousedown: (e) => e.preventDefault(), onclick: () => {
+  const t = lastBox; if (!t || t.readOnly || !t.isConnected) return;
+  const s = t.selectionStart ?? t.value.length, e2 = t.selectionEnd ?? s;
+  t.value = t.value.slice(0, s) + c + t.value.slice(e2); t.focus(); t.setSelectionRange(s + 1, s + 1); t.dispatchEvent(new Event('input'));
+} }, c)));
+
+// onDone({ ok, q }) fires when the learner moves on. Every typed answer that was wrong has to be typed again correctly first.
 function QCard(q, onDone) {
   let res = null, hinted = false, override = false, timer = null, closed = false;
+  // A question is one or more boxes; a plain question is a single box.
+  const cells = q.cells || [{ label: q.lang === 'en' ? 'English' : 'French', answers: q.answers }];
+  const multi = cells.length > 1;
   const el = h('div.qcard');
   const result = h('div.result', { 'aria-live': 'polite' });
   const hintEl = h('p.hint', { hidden: true }, q.hint || '');
   const finish = () => { if (closed) return; closed = true; clearTimeout(timer); keyHandler = null; onDone({ ok: res.ok || override, q }); };
+  const cellCheck = (c, v) => check({ lang: q.lang, answers: c.answers }, v);
 
-  function grade(given, gaveUp) {
+  function grade(values, gaveUp) {
     if (res) return;
-    if (!gaveUp && !q.choices && !String(given).trim()) return;
-    const c = gaveUp ? { ok: false } : q.choices ? { ok: given === q.answers[0] } : check(q, given);
-    res = { ok: c.ok, accent: c.accent, given: gaveUp ? '' : given };
+    if (!gaveUp && !q.choices && !values.some((v) => String(v).trim())) return;
+    let per;
+    if (gaveUp) per = cells.map(() => ({ ok: false }));
+    else if (q.choices) per = [{ ok: values[0] === q.answers[0] }];
+    else per = cells.map((c, i) => cellCheck(c, values[i]));
+    res = { ok: per.every((p) => p.ok), accent: per.some((p) => p.accent), per, given: gaveUp ? cells.map(() => '') : values };
     record(q, res.ok);
     hintEl.hidden = true;
     controls.hidden = true;
@@ -401,54 +427,73 @@ function QCard(q, onDone) {
   function showResult() {
     const ok = res.ok;
     const nextBtn = h('button.btn.primary', { type: 'button', onclick: finish }, 'Next →');
-    const parts = [h('div.verdict.' + (ok ? 'ok' : 'no'), null, ok ? drawCheck() : '✕', ok ? (res.accent ? 'Right · watch the accent' : hinted ? 'Right, with a hint' : 'Correct') : 'Not quite')];
-    if (!ok || res.accent) parts.push(diff(q.answers[0], res.given, q.lang === 'en'));
+    const right = res.per.filter((p) => p.ok).length;
+    const parts = [h('div.verdict.' + (ok ? 'ok' : 'no'), null, ok ? drawCheck() : '✕',
+      ok ? (res.accent ? 'Right · watch the accent' : hinted ? 'Right, with a hint' : 'Correct') : multi ? right + ' of ' + cells.length + ' right' : 'Not quite')];
+    if (multi) {
+      // Each form with the right answer under it; the ones you missed are highlighted where they differ.
+      parts.push(h('div.formgrid.result-grid', null, cells.map((c, i) => h('div.cell.' + (res.per[i].ok && !res.per[i].accent ? 'ok' : res.per[i].ok ? 'acc' : 'no'), null,
+        h('small', null, SHORT[c.label] || c.label), res.per[i].ok && !res.per[i].accent ? h('div.gold.small', { lang: 'fr' }, c.answers[0]) : diff(c.answers[0], res.given[i], false)))));
+    } else if (!ok || res.accent) parts.push(diff(q.answers[0], res.given[0], q.lang === 'en'));
     if (q.full) parts.push(h('div.translation', null, h('span.fr', { lang: 'fr' }, q.full), h('span.muted', null, q.en)));
-    else if (q.showLang === 'en' && q.lang === 'fr' && ok) parts.push(h('div.translation', null, h('span.fr', { lang: 'fr' }, q.answers[0]), h('span.muted', null, q.show)));
+    else if (q.showLang === 'en' && q.lang === 'fr' && ok && !multi) parts.push(h('div.translation', null, h('span.fr', { lang: 'fr' }, q.answers[0]), h('span.muted', null, q.show)));
     if (!ok || q.full || q.topic === 'forms') parts.push(h('div.note-box', null, h('b', null, ok ? 'Why. ' : 'Rule. '), q.why));
-    if (!ok && !q.choices) {
-      // Type it again: Next unlocks once the right answer has been written out.
-      const inp = h('input.answer' + (q.lang === 'fr' ? '.fr' : ''), { type: 'text', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', lang: q.lang, id: 'retype' });
+    const wrong = q.choices ? [] : cells.map((c, i) => i).filter((i) => !res.per[i].ok);
+    if (wrong.length) {
+      // Type it again: Next unlocks once every missed form has been written out correctly.
       nextBtn.disabled = true;
-      const test = () => { if (check(q, inp.value).ok) { inp.classList.add('ok'); inp.readOnly = true; pop(inp); nextBtn.disabled = false; timer = setTimeout(finish, 650); } else if (inp.value.trim()) { inp.classList.add('no'); shake(inp); setTimeout(() => inp.classList.remove('no'), 500); } };
-      inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); nextBtn.disabled ? test() : finish(); } });
-      parts.push(h('div.retype.field', null, h('label', { for: 'retype' }, 'Type it again, correctly, to move on'), inp));
-      setTimeout(() => inp.focus(), 60);
+      const boxes = wrong.map((i, k) => {
+        const inp = textInput(q.lang, 'retype' + k, { 'data-retype': '1' });
+        inp.addEventListener('input', () => { if (cellCheck(cells[i], inp.value).ok && !inp.readOnly) { inp.classList.add('ok'); inp.readOnly = true; pop(inp); const nxt = boxes.find((b) => !b.readOnly); if (nxt) nxt.focus(); else unlock(); } });
+        inp.addEventListener('keydown', (e) => {
+          if (e.key !== 'Enter') return;
+          e.preventDefault(); e.stopPropagation();
+          if (!nextBtn.disabled) return finish();
+          if (inp.value.trim() && !inp.readOnly) { inp.classList.add('no'); shake(inp); setTimeout(() => inp.classList.remove('no'), 500); }
+        });
+        return inp;
+      });
+      const unlock = () => { nextBtn.disabled = false; timer = setTimeout(finish, 650); };
+      parts.push(h('div.retype', null, h('div.retype-title', null, 'Type ' + (wrong.length > 1 ? 'them' : 'it') + ' again, correctly, to move on'),
+        h('div' + (multi ? '.formgrid' : ''), null, wrong.map((i, k) => h('div.field', null, multi ? h('label', { for: 'retype' + k }, SHORT[cells[i].label] || cells[i].label) : null, boxes[k]))),
+        q.lang === 'fr' ? accentKeys() : null));
+      setTimeout(() => boxes[0].focus(), 60);
     }
     const sure = !ok ? h('button.btn.ghost', { type: 'button', onclick: () => { override = true; unrecord(q); finish(); } }, 'I was correct') : null;
-    parts.push(h('div.row', { style: 'margin-top:0.9rem' }, nextBtn, !ok && !q.choices ? h('button.btn.ghost', { type: 'button', onclick: finish }, 'Skip') : null, sure,
+    parts.push(h('div.row', { style: 'margin-top:0.9rem' }, nextBtn, wrong.length ? h('button.btn.ghost', { type: 'button', onclick: finish }, 'Skip') : null, sure,
       h('span.note', { style: 'margin-left:auto' }, h('span.kbd', null, 'Enter'), ' next')));
     result.replaceChildren(...parts);
     fadeUp(result);
-    if (ok) timer = setTimeout(finish, res.accent ? 2200 : q.full ? 1900 : 1100);
+    if (ok) timer = setTimeout(finish, res.accent ? 2200 : q.full || multi ? 1900 : 1100);
     if (ok || q.choices) nextBtn.focus();
-    keyHandler = (e) => { if (e.key === 'Enter' && e.target.tagName !== 'BUTTON' && e.target.id !== 'retype' && !nextBtn.disabled) { e.preventDefault(); finish(); } };
+    keyHandler = (e) => { if (e.key === 'Enter' && e.target.tagName !== 'BUTTON' && !(e.target.dataset && e.target.dataset.retype) && !nextBtn.disabled) { e.preventDefault(); finish(); } };
   }
 
-  let body, controls, input;
+  let body, controls, inputs = [];
   const hintBtn = h('button.btn', { type: 'button', onclick: () => { hinted = true; hintEl.hidden = false; fadeUp(hintEl); hintBtn.disabled = true; } }, '💡 Hint');
-  const giveUp = h('button.btn.ghost', { type: 'button', onclick: () => { grade('', true); if (input) { input.classList.add('no'); input.readOnly = true; } } }, 'I don’t know');
+  const giveUp = h('button.btn.ghost', { type: 'button', onclick: () => { grade([], true); inputs.forEach((x) => { x.classList.add('no'); x.readOnly = true; }); } }, 'I don’t know');
   if (q.choices) {
     body = h('div.choices', null, q.choices.map((c, i) => h('button', { type: 'button', 'data-v': c, onclick: (e) => {
       if (res) return;
-      grade(c);
+      grade([c]);
       body.querySelectorAll('button').forEach((b) => { b.disabled = true; if (b.dataset.v === q.answers[0]) b.classList.add('ok'); else if (b === e.currentTarget) { b.classList.add('no'); shake(b); } });
     } }, h('span.kbd', null, String(i + 1)), c)));
     controls = h('div.row', { style: 'margin-top:0.8rem' }, hintBtn, giveUp);
     keyHandler = (e) => { const i = +e.key - 1; if (!res && q.choices[i]) { e.preventDefault(); body.querySelectorAll('button')[i].click(); } };
   } else {
-    input = h('input.answer' + (q.lang === 'fr' ? '.fr' : ''), { type: 'text', id: 'ans', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', lang: q.lang });
-    const submit = () => { if (res) return; grade(input.value); if (res) { input.classList.add(res.ok ? 'ok' : 'no'); input.readOnly = true; (res.ok ? pop : shake)(input); } };
-    input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !res) { e.preventDefault(); e.stopPropagation(); submit(); } });
-    const keys = q.lang === 'fr' ? h('div.keys', { 'aria-label': 'Accented letters' }, ['é', 'è', 'ê', 'à', 'â', 'ç', 'ï', 'î', 'ô', 'û'].map((c) => h('button', { type: 'button', tabindex: '-1', onmousedown: (e) => e.preventDefault(), onclick: () => {
-      const target = document.activeElement && document.activeElement.id === 'retype' ? document.activeElement : input;
-      if (target.readOnly) return;
-      const s = target.selectionStart ?? target.value.length, e2 = target.selectionEnd ?? s;
-      target.value = target.value.slice(0, s) + c + target.value.slice(e2); target.focus(); target.setSelectionRange(s + 1, s + 1);
-    } }, c))) : null;
-    body = h('div.field', null, h('label', { for: 'ans' }, q.lang === 'en' ? 'English' : 'French'), input, keys);
+    inputs = cells.map((c, i) => textInput(q.lang, 'ans' + i));
+    const submit = () => {
+      if (res) return;
+      grade(inputs.map((x) => x.value));
+      if (res) inputs.forEach((x, i) => { const p = res.per[i]; x.classList.add(p.ok ? 'ok' : 'no'); x.readOnly = true; (p.ok ? pop : shake)(x); });
+    };
+    // Enter moves to the next box; Enter in the last box checks.
+    inputs.forEach((x, i) => x.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !res) { e.preventDefault(); e.stopPropagation(); if (i < inputs.length - 1) inputs[i + 1].focus(); else submit(); } }));
+    body = h('div', null,
+      h('div' + (multi ? '.formgrid' : ''), null, cells.map((c, i) => h('div.field' + (multi ? '.' + (i % 2 ? 'f' : 'm') : ''), null, h('label', { for: 'ans' + i }, multi ? SHORT[c.label] || c.label : c.label), inputs[i]))),
+      q.lang === 'fr' ? accentKeys() : null);
     controls = h('div.row', { style: 'margin-top:0.9rem' }, h('button.btn.primary', { type: 'button', onclick: submit }, 'Check'), hintBtn, giveUp);
-    setTimeout(() => input.focus(), 40);
+    setTimeout(() => inputs[0].focus(), 40);
   }
   el.append(
     h('div.chips', null, h('span.chip.accent', null, KIND[q.topic] || q.topic), q.again ? h('span.chip.warm', null, '↻ Again') : null, byId[q.word] ? h('span.chip', null, 'Leçon ' + byId[q.word].lesson) : null),
@@ -549,7 +594,7 @@ function LearnTab() {
   return h('section.panel.stack', null,
     h('h2', null, 'Next 5 words'),
     h('div.words', { lang: 'fr' }, group.map((a) => h('span', null, a.f[0]))),
-    h('p.note', null, 'Groups of 5: meet each word and copy it out, match them up, then recall them both ways. Words you miss come back until you get them.'),
+    h('p.note', null, 'Groups of 5: meet each word and copy out all its forms, match them up, then recall the meaning and every form. Words you miss come back until you get them.'),
     h('button.btn.primary', { type: 'button', onclick: () => go('vocab', Learn(group.map((a) => a.id))) }, 'Start learning →'));
 }
 function Steps(on) {
@@ -564,13 +609,16 @@ function Learn(ids) {
   let i = 0;
   function meet(dir = 1) {
     const a = words[i];
-    const okFr = (v) => check({ lang: 'fr', answers: [a.f[0]] }, v).ok, okEn = (v) => check({ lang: 'en', answers: a.en }, v).ok;
-    const fr = h('input.answer.fr', { id: 'cfr', placeholder: a.f[0], autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', lang: 'fr' });
-    const en = h('input.answer', { id: 'cen', placeholder: a.en[0], autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', lang: 'en' });
+    // Copy out every form and the meaning; each box turns green when it matches.
+    const forms = a.f.map((f, k) => [['masc.', 'fem.', 'masc. pl.', 'fem. pl.'][k], f]).concat(a.alt ? [['before a vowel', a.alt]] : []);
+    const frBoxes = forms.map(([, f], k) => textInput('fr', 'cfr' + k, { placeholder: f }));
+    const en = textInput('en', 'cen', { placeholder: a.en[0] });
     const mark = (inp, ok) => { if (ok && !inp.classList.contains('ok')) { inp.classList.add('ok'); pop(inp); } else if (!ok) inp.classList.remove('ok'); };
-    fr.addEventListener('input', () => mark(fr, okFr(fr.value))); en.addEventListener('input', () => mark(en, okEn(en.value)));
+    frBoxes.forEach((x, k) => x.addEventListener('input', () => mark(x, check({ lang: 'fr', answers: [forms[k][1]] }, x.value).ok)));
+    en.addEventListener('input', () => mark(en, check({ lang: 'en', answers: a.en }, en.value).ok));
     const nextW = () => { if (i < words.length - 1) { i++; meet(1); } else match(); };
-    [fr, en].forEach((x) => x.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); x === fr ? en.focus() : nextW(); } }));
+    const all = frBoxes.concat(en);
+    all.forEach((x, k) => x.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); k < all.length - 1 ? all[k + 1].focus() : nextW(); } }));
     const card = h('div.qcard.meet', null,
       h('div.chips', null, h('span.chip.accent', null, 'New word ' + (i + 1) + ' of ' + words.length), h('span.chip', null, GROUPS[a.group]), a.before ? h('span.chip', null, 'goes before the noun') : null),
       h('div.word.fr', { lang: 'fr', style: 'margin-top:1rem' }, a.f[0], a.alt ? h('span.tag.warm', null, a.alt) : null),
@@ -578,14 +626,16 @@ function Learn(ids) {
       formsRow(a),
       a.note ? h('div.note-box', null, a.note) : null,
       a.alt ? h('div.note-box', null, h('b', null, a.alt + ' '), 'before a masculine noun starting with a vowel or silent h: un ' + a.alt + ' ami.') : null,
-      h('p.note', null, 'Copy it out once, saying it aloud (optional, but it helps). Press Enter for the next word.'),
-      h('div.copy', null, h('div.field', null, h('label', { for: 'cfr' }, 'French'), fr), h('div.field', null, h('label', { for: 'cen' }, 'Meaning'), en)),
+      h('p.note', null, 'Copy out every form and the meaning, saying them aloud (optional, but it helps). Enter moves to the next box.'),
+      h('div.formgrid', null, forms.map(([label], k) => h('div.field.' + (k % 2 ? 'f' : 'm'), null, h('label', { for: 'cfr' + k }, label), frBoxes[k]))),
+      h('div.field', { style: 'margin-top:0.65rem' }, h('label', { for: 'cen' }, 'Meaning'), en),
+      accentKeys(),
       h('div.row', { style: 'margin-top:1rem' },
         h('button.btn.primary', { type: 'button', onclick: nextW }, i < words.length - 1 ? 'Next word →' : 'Match them up →'),
         i ? h('button.btn', { type: 'button', onclick: () => { i--; meet(-1); } }, 'Back') : null));
     wrap.replaceChildren(Steps('Meet'), card);
     anim(card, [{ opacity: 0, transform: 'translateX(' + 40 * dir + 'px)' }, { opacity: 1, transform: 'none' }], 300);
-    setTimeout(() => fr.focus(), 40);
+    setTimeout(() => frBoxes[0].focus(), 40);
   }
   function match() {
     if (words.length < 2) return recall();
@@ -612,10 +662,10 @@ function Learn(ids) {
       h('div', { style: 'margin-top:1rem' }, h('button.btn.ghost.sm', { type: 'button', onclick: () => { i = 0; meet(-1); } }, 'See the words again'))));
   }
   function recall() {
-    const queue = shuffle(words.flatMap((a) => [['fr-en', a.id], ['en-fr', a.id]]));
+    const queue = shuffle(words.flatMap((a) => [['fr-en', a.id], ['all', a.id]]));
     const answered = {};
     stage('Recall', Run({
-      title: 'Recall both ways', total: queue.length, again: true,
+      title: 'Recall: meaning and every form', total: queue.length, again: true,
       next: () => { const x = queue.shift(); return x ? question([x[0]], [x[1]]) : null; },
       onAnswer: (q, r) => { answered[q.word] = true; if (!r.ok) missed[q.word] = true; },
       back: () => go('vocab'),
@@ -648,7 +698,7 @@ function Review(ids, schedule) {
   const queue = ids.slice(), graded = {};
   return Run({
     title: schedule ? 'Review' : 'Extra practice', total: ids.length, again: true,
-    next: () => { const id = queue.shift(); return id ? question([pick(['fr-en', 'en-fr', 'forms'])], [id]) : null; },
+    next: () => { const id = queue.shift(); return id ? question([pick(['all', 'all', 'fr-en', 'en-fr'])], [id]) : null; }, // mostly every form, so they stick
     onAnswer: (q, r) => { if (schedule && !graded[q.word]) { graded[q.word] = true; P.cards[q.word] = review(P.cards[q.word], r.ok ? 3 : 1, Date.now()); save(); } },
     summary: schedule ? () => h('p', null, 'Next review ' + when(nextDue()) + '.') : null,
     back: () => go('vocab'),

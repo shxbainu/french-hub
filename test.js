@@ -30,6 +30,7 @@ for (const [t] of TOPICS) for (let i = 0; i < 400; i++) {
   const x = Q[t]();
   assert.ok(x.answers.length && x.answers.every(Boolean), t);
   if (x.choices) assert.ok(x.choices.includes(x.answers[0]), t);
+  else if (x.cells) assert.ok(x.cells.every((c) => check({ lang: 'fr', answers: c.answers }, c.answers[0]).ok), t);
   else assert.ok(check(x, x.answers[0]).ok, t);
   assert.ok(x.show && x.why, t);
   assert.ok(A[x.word], t + ' has a word');
@@ -62,5 +63,10 @@ assert.equal(d.state, 'relearning');
 assert.equal(d.due - c.due, 5 * FR.MIN);
 assert.equal(FR.TOPICS.length, FR.VOCAB.length + FR.GRAMMAR.length);
 assert.ok(FR.GRAMMAR.every(([t]) => FR.RULE_OF[t]));
+
+// All forms: four cells, plus the vowel form for beau / nouveau / vieux.
+const all = FR.question(['all'], ['vieux']);
+assert.deepEqual(all.cells.map((c) => c.answers[0]), ['vieux', 'vieille', 'vieux', 'vieilles', 'vieil']);
+assert.equal(FR.question(['all'], ['bleu']).cells.length, 4);
 
 console.log('ok');

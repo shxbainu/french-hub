@@ -58,7 +58,7 @@
   ];
 
   // Vocab drills feed the spaced-repetition review; grammar drills are sentence work with a rule beside them.
-  const VOCAB = [['fr-en', 'Meaning: French → English'], ['en-fr', 'Meaning: English → French'], ['forms', 'The four forms']];
+  const VOCAB = [['fr-en', 'Meaning: French → English'], ['en-fr', 'Meaning: English → French'], ['forms', 'One form'], ['all', 'All four forms']];
   const GRAMMAR = [
     ['sent', 'Sentences'], ['phrase', 'Write the phrase'], ['place', 'Before or after the noun?'],
     ['bel', 'bel, nouvel, vieil'], ['de', 'de or des?'], ['hair', 'Hair'],
@@ -148,6 +148,14 @@
       if (p.form === a.alt) bits.push(a.alt + ' before a vowel or silent h.');
       if (pl && a.before) bits.push('Plural adjective before the noun: de, not des.');
       return { topic: 'sent', word: a.id, ask: 'Write it in French', show: 'I have ' + p.en + '.', showLang: 'en', lang: 'fr', answers: ["J'ai " + p.fr + '.'], why: bits.join(' '), hint: HINT.phrase };
+    },
+    // Every form at once: masc., fem., masc. pl., fem. pl. (and bel / nouvel / vieil).
+    all() {
+      const a = pick(pool());
+      const cells = a.f.map((f, i) => ({ label: SLOT[i], answers: [f] }));
+      if (a.alt) cells.push({ label: 'before a vowel', answers: [a.alt] });
+      return { topic: 'all', word: a.id, ask: 'Give every form', show: a.en[0], showLang: 'en', lang: 'fr', cells,
+        answers: [a.f.join(', ') + (a.alt ? ' (' + a.alt + ')' : '')], why: whyForm(a) + (a.alt ? ' Before a vowel or silent h: ' + a.alt + '.' : ''), hint: startsWith(a.f[0]) };
     },
     place() {
       const a = pick(pool((x) => x.on));
