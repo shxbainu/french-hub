@@ -43,7 +43,7 @@ button { cursor: pointer; }
 .f { color: rgb(var(--gf)); } .m { color: rgb(var(--gm)); }
 
 /* Dashboard shell: a navy sidebar beside the work area. */
-.shell { max-width: 1320px; margin: 0 auto; display: flex; min-height: 100vh; }
+.shell { width: 100%; display: flex; min-height: 100vh; }
 aside { width: 248px; flex-shrink: 0; position: sticky; top: 0; height: 100vh; padding: 28px 16px; display: flex; flex-direction: column; gap: 24px; background: rgb(var(--side)); color: rgb(var(--side-ink)); }
 .brand { display: flex; align-items: center; gap: 12px; padding: 0 8px; font: 700 26px/1 'Cormorant Garamond', Georgia, serif; white-space: nowrap; }
 .flag { display: flex; width: 26px; height: 18px; border-radius: 3px; overflow: hidden; flex-shrink: 0; }
@@ -102,7 +102,7 @@ h2 { font: 700 23px/1.2 'Cormorant Garamond', Georgia, serif; margin: 0 0 10px; 
 .seg button[aria-pressed="true"] { background: rgb(var(--accent-soft)); color: rgb(var(--accent)); }
 
 /* question card */
-.drill { max-width: 680px; margin: 0 auto; }
+.drill { width: 100%; }
 .bar { height: 6px; border-radius: 3px; background: rgb(var(--sunken)); overflow: hidden; margin-bottom: 18px; }
 .bar i { display: block; height: 100%; background: rgb(var(--accent)); transition: width .3s; }
 .ask { text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; font-weight: 700; color: rgb(var(--muted)); }
