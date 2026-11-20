@@ -143,9 +143,27 @@ td.fr { font-size: 18px; }
 .big b { color: rgb(var(--accent)); }
 .rules { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
 
+/* vocab */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid rgb(var(--line)); margin-bottom: 18px; overflow-x: auto; }
+.tabs button { border: 0; background: none; padding: 10px 14px; font-weight: 700; color: rgb(var(--muted)); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.tabs button[aria-selected="true"] { color: rgb(var(--accent)); border-bottom-color: rgb(var(--accent)); }
+.study .show { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px; }
+.meaning { font-size: 20px; font-weight: 700; margin: 4px 0 16px; }
+.forms { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.forms span { background: rgb(var(--sunken)); border-radius: 6px; padding: 8px 10px; font-size: 21px; }
+.forms small { display: block; font: 700 11px Manrope, sans-serif; letter-spacing: 0.06em; text-transform: uppercase; color: rgb(var(--muted)); }
+
+/* grammar: the drill with its rule beside it */
+.with-help { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 0.8fr); gap: 24px; align-items: start; }
+.help { position: sticky; top: 20px; max-height: calc(100vh - 40px); overflow-y: auto; }
+.help .panel { background: rgb(var(--sunken) / 0.6); }
+.topics .meta { margin-left: auto; font-size: 13px; color: rgb(var(--muted)); }
+
 @media (max-width: 1180px) {
   .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dash { grid-template-columns: 1fr; }
+  .with-help { grid-template-columns: 1fr; }
+  .help { position: static; max-height: none; }
 }
 @media (max-width: 760px) {
   .shell { flex-direction: column; }
@@ -163,6 +181,7 @@ td.fr { font-size: 18px; }
   .ex { grid-template-columns: 1fr; }
   .ex .en-ex { margin-top: 6px; }
   .drow { grid-template-columns: minmax(0, 1fr) 70px 40px; }
+  .forms { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 </style>
 </head>
@@ -177,7 +196,7 @@ td.fr { font-size: 18px; }
 </div>
 <script src="french.js"></script>
 <script>
-const { ADJ, LESSONS, GROUPS, BEFORE, TOPICS, question, check } = window.FR;
+const { ADJ, LESSONS, GROUPS, BEFORE, VOCAB, GRAMMAR, RULE_OF, question, check, review, DAY, MIN } = window.FR;
 const $main = document.getElementById('main');
 
 // h('div.class', {attrs}, ...children): a tiny DOM builder. Strings become text nodes, so nothing is parsed as HTML.
@@ -196,21 +215,29 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem('frhub:' + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem('frhub:' + k, JSON.stringify(v)); } catch (e) { /* private mode: fine */ } },
 };
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const byId = window.FR.byId;
 
 /* ---------- progress ---------- */
-// words: id → { n seen, r right, s right-in-a-row }; topics: id → { n, r }; days: 'YYYY-MM-DD' → answers.
-const P = Object.assign({ words: {}, topics: {}, days: {} }, store.get('progress', {}));
+// cards: word id → FSRS card (a word has one once it's learned). words: id → { n seen, r right, s right-in-a-row }.
+// topics: drill id → { n, r }. days: 'YYYY-MM-DD' → answers that day.
+const P = Object.assign({ words: {}, topics: {}, days: {}, cards: {} }, store.get('progress', {}));
+P.cards ||= {};
+const save = () => store.set('progress', P);
 const dayKey = (d = new Date()) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-const MASTER = 3; // right this many times in a row = mastered
 function record(q, ok) {
   const w = P.words[q.word] ||= { n: 0, r: 0, s: 0 };
   w.n++; if (ok) { w.r++; w.s++; } else w.s = 0;
   const t = P.topics[q.topic] ||= { n: 0, r: 0 };
   t.n++; if (ok) t.r++;
   P.days[dayKey()] = (P.days[dayKey()] || 0) + 1;
-  store.set('progress', P);
+  save();
 }
-const mastered = (id) => (P.words[id] || {}).s >= MASTER;
+const learned = (id) => !!P.cards[id];
+const dueWords = (now = Date.now()) => ADJ.filter((a) => P.cards[a.id] && P.cards[a.id].due <= now).sort((a, b) => P.cards[a.id].due - P.cards[b.id].due);
+const newWords = () => ADJ.filter((a) => !learned(a.id));
+const nextDue = () => Math.min(...ADJ.map((a) => (P.cards[a.id] ? P.cards[a.id].due : Infinity)));
 const trouble = () => ADJ.filter((a) => { const w = P.words[a.id]; return w && w.n && (w.s === 0 || (w.n >= 3 && w.r / w.n < 0.6)); });
 function dayStreak() {
   const d = new Date(); let n = 0;
@@ -220,213 +247,350 @@ function dayStreak() {
 }
 const pct = (r, n) => (n ? Math.round((r / n) * 100) : null);
 const meter = (v, cls) => h('div.meter' + (cls ? '.' + cls : ''), null, h('i', { style: 'width:' + (v || 0) + '%' }));
-
-/* ---------- pages ---------- */
-const PAGES = { home: Home, practice: Practice, words: Words, rules: Rules };
-const NAV = [['home', 'Dashboard'], ['practice', 'Practice'], ['words', 'Words'], ['rules', 'Rules']];
-function renderNav(page) {
-  const m = ADJ.filter((a) => mastered(a.id)).length, tr = trouble().length;
-  document.getElementById('nav').replaceChildren(...NAV.map(([id, label]) => h('button', { type: 'button', 'aria-current': id === page ? 'page' : null, onclick: () => go(id) }, label,
-    id === 'home' && tr ? h('span.badge', { title: tr + ' trouble words' }, String(tr)) : null,
-    id === 'words' ? h('span.meta', null, Math.round((m / ADJ.length) * 100) + '%') : null)));
-  document.getElementById('side-foot').replaceChildren(h('div', null, m + ' / ' + ADJ.length + ' words mastered'), meter((m / ADJ.length) * 100));
+function when(t) {
+  const d = t - Date.now();
+  if (!isFinite(t)) return '–';
+  if (d <= 0) return 'now';
+  if (d < 3600000) return 'in ' + Math.max(1, Math.round(d / MIN)) + ' min';
+  if (d < DAY) return 'in ' + Math.round(d / 3600000) + ' h';
+  const days = Math.round(d / DAY);
+  return days === 1 ? 'tomorrow' : 'in ' + days + ' days';
 }
-function go(page) {
+function grammarAcc() {
+  const t = GRAMMAR.reduce((a, [id]) => { const x = P.topics[id] || { n: 0, r: 0 }; return { n: a.n + x.n, r: a.r + x.r }; }, { n: 0, r: 0 });
+  return pct(t.r, t.n);
+}
+
+/* ---------- navigation ---------- */
+const PAGES = { home: Home, vocab: Vocab, grammar: Grammar, rules: Rules };
+const OLD = { practice: 'grammar', words: 'vocab' };
+const NAV = [['home', 'Dashboard'], ['vocab', 'Vocab'], ['grammar', 'Grammar'], ['rules', 'Rules']];
+let current = 'home';
+function renderNav() {
+  const due = dueWords().length, g = grammarAcc(), l = ADJ.filter((a) => learned(a.id)).length;
+  document.getElementById('nav').replaceChildren(...NAV.map(([id, label]) => h('button', { type: 'button', 'aria-current': id === current ? 'page' : null, onclick: () => go(id) }, label,
+    id === 'vocab' && due ? h('span.badge', { title: due + ' words due for review' }, String(due)) : null,
+    id === 'grammar' && g != null ? h('span.meta', null, g + '%') : null)));
+  document.getElementById('side-foot').replaceChildren(h('div', null, l + ' / ' + ADJ.length + ' words learned'), meter((l / ADJ.length) * 100));
+}
+function go(page, view) {
+  page = OLD[page] || page;
   if (!PAGES[page]) page = 'home';
+  current = page;
   if (location.hash.slice(1) !== page) history.replaceState(null, '', '#' + page);
-  renderNav(page);
-  $main.replaceChildren(PAGES[page]());
+  renderNav();
+  $main.replaceChildren(view || PAGES[page]());
   window.scrollTo(0, 0);
 }
+const show = (page, view) => go(page, view); // open a page with a specific view (a session) in it
 window.addEventListener('hashchange', () => go(location.hash.slice(1)));
-const startSession = (topics, len, words) => { renderNav('practice'); $main.replaceChildren(Session(topics, len, words)); window.scrollTo(0, 0); };
 
-/* ---------- dashboard ---------- */
-function Home() {
-  const m = ADJ.filter((a) => mastered(a.id)).length, tr = trouble();
-  const all = Object.values(P.topics).reduce((a, t) => ({ n: a.n + t.n, r: a.r + t.r }), { n: 0, r: 0 });
-  const today = P.days[dayKey()] || 0, streak = dayStreak();
-  const tried = TOPICS.filter(([t]) => (P.topics[t] || {}).n);
-  const weakest = tried.length ? tried.reduce((a, b) => (pct(P.topics[a[0]].r, P.topics[a[0]].n) <= pct(P.topics[b[0]].r, P.topics[b[0]].n) ? a : b)) : null;
-  const untried = TOPICS.find(([t]) => !(P.topics[t] || {}).n);
-  const next = untried || weakest;
-  const tile = (label, num, sub) => h('div.panel.tile', null, h('div.ask', null, label), h('div.num', null, ...num), h('div.note', null, sub));
-  const allTopics = TOPICS.map(([t]) => t);
-  const hour = new Date().getHours();
-  return h('div', null,
-    h('h1', null, hour < 18 ? 'Bonjour !' : 'Bonsoir !'),
-    h('p.lede', null, all.n ? 'Here’s where you are. Pick up with the suggested drill, or clear your trouble words.' : 'Start with a quick round: ten questions across everything in Leçon 3A1.'),
-    h('div.tiles', null,
-      tile('Words mastered', [String(m), h('small', null, ' / ' + ADJ.length)], 'right ' + MASTER + ' times in a row'),
-      tile('Today', [String(today)], today === 1 ? 'answer' : 'answers'),
-      tile('Streak', [String(streak)], streak === 1 ? 'day' : 'days in a row'),
-      tile('Accuracy', [all.n ? pct(all.r, all.n) + '%' : '–'], all.n ? all.n + ' answers in all' : 'no answers yet')),
-    h('div.dash', null,
-      h('div.stack', null,
-        h('section.panel', null, h('h2', null, 'Keep going'),
-          h('div.actions', null,
-            h('button.btn.primary', { type: 'button', onclick: () => startSession(allTopics, 10) }, 'Quick round: 10 questions', h('span', { 'aria-hidden': 'true' }, '→')),
-            next ? h('button.btn', { type: 'button', onclick: () => startSession([next[0]], 10) }, (untried ? 'Try next: ' : 'Weakest drill: ') + next[1], h('span', { 'aria-hidden': 'true' }, '→')) : null,
-            tr.length ? h('button.btn', { type: 'button', onclick: () => startSession(allTopics, 10, tr.map((a) => a.id)) }, 'Practice trouble words (' + tr.length + ')', h('span', { 'aria-hidden': 'true' }, '→')) : null),
-          tr.length ? h('div.chips', { lang: 'fr' }, tr.map((a) => h('span', null, a.id))) : null),
-        h('section.panel', null, h('h2', null, 'Lessons'),
-          LESSONS.map((l) => {
-            const ws = ADJ.filter((a) => a.lesson === l.id), lm = ws.filter((a) => mastered(a.id)).length;
-            return h('div.lesson', null, h('div.code', null, l.id),
-              h('div.lesson-body', null, h('b', null, l.title + ' · ' + l.sub), h('div.note', null, lm + ' of ' + ws.length + ' words mastered'), h('div', { style: 'margin-top:6px' }, meter((lm / ws.length) * 100, 'good'))),
-              h('button.btn', { type: 'button', onclick: () => go('words') }, 'Words'));
-          }))),
-      h('section.panel', null, h('h2', null, 'Drills'),
-        h('p.note', { style: 'margin:0 0 6px' }, 'Your accuracy in each. Tap one to practise it.'),
-        TOPICS.map(([t, label]) => {
-          const x = P.topics[t], v = x ? pct(x.r, x.n) : null;
-          return h('div.drow', null,
-            h('button', { type: 'button', onclick: () => startSession([t], 10) }, label),
-            meter(v, v == null ? null : v >= 80 ? 'good' : v < 60 ? 'low' : null),
-            h('span.pct', null, v == null ? 'new' : v + '%'));
-        }))));
+/* ---------- one question ---------- */
+// Renders a question; calls onGraded(result) once and onNext() when the learner moves on.
+function QCard(q, { onGraded, onNext, nextLabel = 'Next' }) {
+  let done = false;
+  const fb = h('div', { 'aria-live': 'polite' });
+  const nextBtn = h('button.btn.primary', { type: 'button', hidden: true, onclick: () => onNext() }, nextLabel);
+  function grade(given) {
+    if (done) return;
+    if (!q.choices && !given.trim()) return;
+    const r = q.choices ? { ok: given === q.answers[0], accent: false } : check(q, given);
+    done = true;
+    record(q, r.ok);
+    onGraded && onGraded(r);
+    fb.replaceChildren(h('div.fb.' + (r.ok ? 'ok' : 'no'), null,
+      h('b', null, r.ok ? (r.accent ? 'Right, but watch the accent' : 'Right') : 'Not quite'),
+      !r.ok || r.accent ? h('div.want' + (q.lang === 'en' ? '' : '.fr'), null, q.answers[0]) : null,
+      h('div', null, q.why)));
+    nextBtn.hidden = false;
+    nextBtn.focus();
+    return r;
+  }
+  let body;
+  if (q.choices) {
+    body = h('div.choices', null, q.choices.map((c) => h('button', { type: 'button', onclick: (e) => {
+      if (done) return;
+      grade(c);
+      body.querySelectorAll('button').forEach((b) => { b.disabled = true; if (b.textContent === q.answers[0]) b.classList.add('ok'); else if (b === e.currentTarget) b.classList.add('no'); });
+    } }, c)));
+  } else {
+    const input = h('input.answer' + (q.lang === 'fr' ? '.fr' : ''), { type: 'text', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', lang: q.lang, 'aria-label': q.ask });
+    const checkBtn = h('button.btn.primary', { type: 'button', onclick: () => submit() }, 'Check');
+    const submit = () => { const r = grade(input.value); if (r) { input.classList.add(r.ok ? 'ok' : 'no'); input.readOnly = true; checkBtn.hidden = true; } };
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); done ? onNext() : submit(); } });
+    const keys = q.lang === 'fr' ? h('div.keys', { 'aria-label': 'Accented letters' }, ['é', 'è', 'ê', 'à', 'â', 'ç', 'ï', 'î', 'ô', 'û'].map((c) => h('button', { type: 'button', tabindex: '-1', onclick: () => {
+      if (done) return;
+      const s = input.selectionStart ?? input.value.length, e2 = input.selectionEnd ?? s;
+      input.value = input.value.slice(0, s) + c + input.value.slice(e2); input.focus(); input.setSelectionRange(s + 1, s + 1);
+    } }, c))) : null;
+    body = h('div', null, input, keys, h('div.row', { style: 'margin-top:14px' }, checkBtn));
+    setTimeout(() => input.focus(), 0);
+  }
+  return h('div.panel', null,
+    h('div.ask', null, q.ask),
+    h('div.show' + (q.showLang === 'fr' ? '.fr' : '.en'), { lang: q.showLang }, q.show),
+    q.sub ? h('p.sub', null, q.sub) : h('div', { style: 'height:14px' }),
+    body, fb,
+    h('div.row', { style: 'margin-top:14px' }, nextBtn));
 }
 
-/* ---------- practice ---------- */
-function Practice() {
-  let picked = store.get('topics', TOPICS.map(([t]) => t)).filter((t) => TOPICS.some(([x]) => x === t));
+// A run of questions. next() returns the next question or null when finished. Shows a summary at the end.
+function Run({ total, next, onAnswer, summary, title, aside }) {
+  let n = 0, right = 0;
+  const missed = [];
+  const wrap = h('div.drill');
+  const head = h('div.run-head');
+  function step() {
+    const q = next(n);
+    if (!q) return finish();
+    const bar = total ? h('div.bar', null, h('i', { style: 'width:' + Math.min(100, (n / total) * 100) + '%' })) : null;
+    head.replaceChildren(h('div.row', { style: 'justify-content:space-between;margin-bottom:10px' },
+      h('span.muted', null, title + (total ? ' · ' + (n + 1) + ' / ' + total : n ? ' · ' + right + ' / ' + n + ' right' : '')),
+      h('button.btn', { type: 'button', onclick: finish }, 'Finish')), bar);
+    aside && aside(q);
+    wrap.replaceChildren(head, QCard(q, {
+      onGraded: (r) => { if (r.ok) right++; else missed.push(q); onAnswer && onAnswer(q, r); },
+      onNext: () => { n++; step(); },
+    }));
+  }
+  function finish() {
+    const done = right + missed.length;
+    renderNav();
+    wrap.replaceChildren(h('div.panel.stack', null,
+      h('div.ask', null, title + ': done'),
+      h('div', null, h('span.score', null, right + ' / ' + done), h('span.muted', null, ' right')),
+      summary ? summary() : null,
+      missed.length ? h('div', null, h('h2', null, 'To look at again'), h('ul.missed', null, missed.map((q) => h('li', null,
+        h('span' + (q.showLang === 'fr' ? '.fr' : ''), null, q.show), ' → ', h('b' + (q.lang === 'en' ? '' : '.fr'), null, q.answers[0]))))) : null,
+      h('div.row', null, h('button.btn.primary', { type: 'button', onclick: () => go(current) }, 'Back to ' + Object.fromEntries(NAV)[current]), h('button.btn', { type: 'button', onclick: () => go('home') }, 'Dashboard'))));
+  }
+  step();
+  return wrap;
+}
+
+/* ---------- vocab ---------- */
+const formsRow = (a) => h('div.forms', { lang: 'fr' }, a.f.map((f, i) => h('span.fr.' + (i % 2 ? 'f' : 'm'), null, h('small', null, ['m.', 'f.', 'm. pl.', 'f. pl.'][i]), f)));
+function Vocab() {
+  let tab = store.get('vtab', 'learn');
+  const due = dueWords(), fresh = newWords(), l = ADJ.length - fresh.length;
+  const body = h('div');
+  const tabs = h('div.tabs', { role: 'tablist' });
+  function setTab(t) {
+    tab = t; store.set('vtab', t);
+    tabs.replaceChildren(...[['learn', 'Learn' + (fresh.length ? ' (' + fresh.length + ' new)' : '')], ['review', 'Review' + (due.length ? ' (' + due.length + ' due)' : '')], ['all', 'All words']].map(([id, label]) =>
+      h('button', { type: 'button', role: 'tab', 'aria-selected': String(id === tab), onclick: () => setTab(id) }, label)));
+    body.replaceChildren({ learn: LearnTab, review: ReviewTab, all: AllWords }[tab]());
+  }
+  setTab(tab);
+  return h('div', null,
+    h('h1', null, 'Vocab'),
+    h('p.lede', null, l + ' of ' + ADJ.length + ' words learned · ' + due.length + ' due now' + (due.length ? '' : ' · next review ' + when(nextDue())) + '. Learn new words in groups of 5, then review them when they’re due: the gaps grow as you remember them.'),
+    tabs, body);
+}
+function LearnTab() {
+  const fresh = newWords(), group = fresh.slice(0, 5);
+  if (!group.length) return h('section.panel', null, h('h2', null, 'Every word is learned'), h('p', null, 'Keep them fresh with reviews. They come back just before you’d forget them.'), h('button.btn.primary', { type: 'button', onclick: () => { store.set('vtab', 'review'); go('vocab'); } }, 'Go to review'));
+  return h('section.panel.stack', null,
+    h('h2', null, 'Next 5 words'),
+    h('div.chips', { lang: 'fr' }, group.map((a) => h('span', null, a.f[0]))),
+    h('p.note', null, 'You’ll see each word with its four forms, then type its meaning both ways. Words you miss come back until you get them.'),
+    h('button.btn.primary', { type: 'button', onclick: () => show('vocab', Learn(group.map((a) => a.id))) }, 'Start learning'));
+}
+function Learn(ids) {
+  const words = ids.map((id) => byId[id]);
+  const wrap = h('div.drill');
+  let i = 0;
+  function study() {
+    const a = words[i];
+    wrap.replaceChildren(
+      h('div.row', { style: 'justify-content:space-between;margin-bottom:10px' }, h('span.muted', null, 'Learn · word ' + (i + 1) + ' of ' + words.length), h('button.btn', { type: 'button', onclick: () => go('vocab') }, 'Stop')),
+      h('div.bar', null, h('i', { style: 'width:' + (i / words.length) * 50 + '%' })),
+      h('div.panel.study', null,
+        h('div.ask', null, GROUPS[a.group]),
+        h('div.show.fr', { lang: 'fr' }, a.f[0], a.alt ? h('span.tag.warm', null, a.alt) : null, a.before ? h('span.tag', null, 'before') : null),
+        h('p.meaning', null, a.en.join(', ')),
+        formsRow(a),
+        a.note ? h('p.note', null, a.note) : null,
+        a.alt ? h('p.note', null, a.alt + ' is used before a masculine noun starting with a vowel or silent h: un ' + a.alt + ' ami.') : null,
+        h('div.row', { style: 'margin-top:18px' },
+          i ? h('button.btn', { type: 'button', onclick: () => { i--; study(); } }, 'Back') : null,
+          h('button.btn.primary', { type: 'button', onclick: () => { i++; i < words.length ? study() : quiz(); } }, i + 1 < words.length ? 'Next word' : 'Quiz me'))));
+  }
+  function quiz() {
+    // Each word, both directions; a miss puts that question back at the end.
+    const queue = shuffle(words.flatMap((a) => [['fr-en', a.id], ['en-fr', a.id]]));
+    const missedWord = {}, answered = {};
+    const total = queue.length;
+    wrap.replaceChildren(Run({
+      title: 'Learn', total,
+      next: () => { const x = queue.shift(); return x ? question([x[0]], [x[1]]) : null; },
+      onAnswer: (q, r) => { answered[q.word] = true; if (!r.ok) { missedWord[q.word] = true; queue.push([q.topic, q.word]); } },
+      summary: () => {
+        const now = Date.now();
+        const got = words.filter((a) => answered[a.id]); // stopping early only counts the words you were quizzed on
+        got.forEach((a) => { if (!P.cards[a.id]) P.cards[a.id] = review(null, missedWord[a.id] ? 1 : 3, now); });
+        save(); renderNav();
+        return got.length ? h('p', null, got.length + (got.length === 1 ? ' word' : ' words') + ' learned. First review ' + when(Math.min(...got.map((a) => P.cards[a.id].due))) + '.') : null;
+      },
+    }));
+  }
+  study();
+  return wrap;
+}
+function ReviewTab() {
+  const due = dueWords(), learnedN = ADJ.filter((a) => learned(a.id)).length;
+  if (!learnedN) return h('section.panel', null, h('h2', null, 'Nothing to review yet'), h('p', null, 'Learn your first 5 words; they’ll show up here when they’re due.'));
+  const extra = h('button.btn', { type: 'button', onclick: () => show('vocab', Review(shuffle(ADJ.filter((a) => learned(a.id))).slice(0, 15).map((a) => a.id), false)) }, 'Extra practice (doesn’t change the schedule)');
+  if (!due.length) return h('section.panel.stack', null, h('h2', null, 'All caught up'), h('p', null, 'Next review ' + when(nextDue()) + '.'), extra);
+  return h('section.panel.stack', null,
+    h('h2', null, due.length + (due.length === 1 ? ' word is' : ' words are') + ' due'),
+    h('div.chips', { lang: 'fr' }, due.slice(0, 30).map((a) => h('span', null, a.f[0]))),
+    h('div.row', null, h('button.btn.primary', { type: 'button', onclick: () => show('vocab', Review(due.slice(0, 20).map((a) => a.id), true)) }, 'Start review' + (due.length > 20 ? ' (20)' : '')), extra));
+}
+// One question per word, a random kind; a miss reschedules the word and asks it again at the end.
+function Review(ids, schedule) {
+  const queue = ids.slice(), graded = {}, again = {};
+  return Run({
+    title: schedule ? 'Review' : 'Extra practice', total: ids.length,
+    next: () => { const id = queue.shift(); return id ? question([pick(['fr-en', 'en-fr', 'forms'])], [id]) : null; },
+    onAnswer: (q, r) => {
+      if (schedule && !graded[q.word]) { graded[q.word] = true; P.cards[q.word] = review(P.cards[q.word], r.ok ? (r.accent ? 2 : 3) : 1, Date.now()); save(); }
+      if (!r.ok && !again[q.word]) { again[q.word] = true; queue.push(q.word); }
+    },
+    summary: schedule ? () => h('p', null, 'Next review ' + when(nextDue()) + '.') : null,
+  });
+}
+function AllWords() {
+  const status = (a) => {
+    const c = P.cards[a.id];
+    if (!c) return h('span.muted', null, 'new');
+    return c.due <= Date.now() ? h('span.tag', null, 'due') : h('span.muted', null, 'review ' + when(c.due));
+  };
+  return h('div.stack', null, Object.keys(GROUPS).map((g) => h('section.panel', null, h('h2', null, GROUPS[g]), h('div.scroll', null, h('table', null,
+    h('thead', null, h('tr', null, ['Masc. sg.', 'Meaning', 'Fem. sg.', 'Masc. pl.', 'Fem. pl.', 'Status'].map((t) => h('th', null, t)))),
+    h('tbody', null, ADJ.filter((a) => a.group === g).map((a) => h('tr', null,
+      h('td.fr.m', { lang: 'fr' }, a.f[0], a.alt ? h('span.tag.warm', { title: 'before a vowel or silent h' }, a.alt) : null),
+      h('td', null, a.en.join(', '), a.before ? h('span.tag', null, 'before') : null, a.note ? h('div.note', null, a.note) : null),
+      h('td.fr.f', { lang: 'fr' }, a.f[1]), h('td.fr.m', { lang: 'fr' }, a.f[2]), h('td.fr.f', { lang: 'fr' }, a.f[3]),
+      h('td', null, status(a))))))))));
+}
+
+/* ---------- grammar ---------- */
+function helpFor(topics) {
+  const ids = [...new Set(topics.flatMap((t) => RULE_OF[t] || []))];
+  return h('div.stack', null, h('div.ask', null, 'Rule help'), ids.map((id) => RULES[id]()));
+}
+function Grammar() {
+  let picked = store.get('gtopics', GRAMMAR.map(([t]) => t)).filter((t) => RULE_OF[t]);
   let len = store.get('len', 10);
-  const start = h('button.btn.primary', { type: 'button', onclick: () => startSession(picked, len) }, 'Start');
-  const sync = () => { start.disabled = !picked.length; store.set('topics', picked); };
+  const help = h('div.help', { role: 'complementary', 'aria-label': 'Rule help' });
+  const start = h('button.btn.primary', { type: 'button', onclick: () => startGrammar(picked, len) }, 'Start');
+  const sync = () => { start.disabled = !picked.length; store.set('gtopics', picked); help.replaceChildren(helpFor(picked.length ? picked : GRAMMAR.map(([t]) => t))); };
   const lens = [[10, '10'], [20, '20'], [0, 'Endless']];
   const seg = h('div.seg', { role: 'group', 'aria-label': 'How many questions' }, lens.map(([n, l]) =>
     h('button', { type: 'button', 'aria-pressed': String(n === len), onclick: (e) => { len = n; store.set('len', n); seg.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b === e.currentTarget))); } }, l)));
   sync();
   return h('div', null,
-    h('h1', null, 'Practice'),
-    h('p.lede', null, 'Pick what to drill. Every answer shows the rule. Accents count as right if you leave them out, but you’ll be reminded.'),
-    h('div.stack', null,
-      h('div.topics', null, TOPICS.map(([t, label]) => h('label', null,
-        h('input', { type: 'checkbox', checked: picked.includes(t), onchange: (e) => { picked = e.target.checked ? [...picked, t] : picked.filter((x) => x !== t); sync(); } }), label))),
-      h('div.row', null, seg, start)));
+    h('h1', null, 'Grammar'),
+    h('p.lede', null, 'Adjectives in phrases and sentences. The rule for each question stays open beside it; every answer explains itself. Accents are optional but flagged.'),
+    h('div.with-help', null,
+      h('div.stack', null,
+        h('div.topics', null, GRAMMAR.map(([t, label]) => {
+          const x = P.topics[t];
+          return h('label', null, h('input', { type: 'checkbox', checked: picked.includes(t), onchange: (e) => { picked = e.target.checked ? [...picked, t] : picked.filter((y) => y !== t); sync(); } }),
+            h('span', null, label), x ? h('span.meta', null, pct(x.r, x.n) + '%') : null);
+        })),
+        h('div.row', null, seg, start)),
+      help));
 }
-
-function Session(topics, len, words) {
-  let n = 0, right = 0, q, done = false;
-  const missed = [];
-  const wrap = h('div.drill');
-  function next() {
-    if (len && n >= len) return finish();
-    q = question(topics, words); done = false;
-    const fill = h('i', { style: 'width:' + (len ? (n / len) * 100 : 0) + '%' });
-    const fb = h('div', { 'aria-live': 'polite' });
-    const nextBtn = h('button.btn.primary', { type: 'button', hidden: true, onclick: () => { n++; done = false; next(); } }, len && n + 1 >= len ? 'See results' : 'Next');
-    const counter = h('span.muted', null, len ? (n + 1) + ' / ' + len : (n ? right + ' / ' + n + ' right' : 'Endless'));
-
-    function grade(given) {
-      if (done) return;
-      const r = q.choices ? { ok: given === q.answers[0], accent: false } : check(q, given);
-      if (!q.choices && !given.trim()) return;
-      done = true;
-      if (r.ok) right++; else missed.push({ q, given });
-      record(q, r.ok);
-      fb.replaceChildren(h('div.fb.' + (r.ok ? 'ok' : 'no'), null,
-        h('b', null, r.ok ? (r.accent ? 'Right, but watch the accent' : 'Right') : 'Not quite'),
-        !r.ok || r.accent ? h('div.want' + (q.lang === 'en' ? '' : '.fr'), null, q.answers[0]) : null,
-        h('div', null, q.why)));
-      nextBtn.hidden = false;
-      nextBtn.focus();
-      return r;
-    }
-
-    let body;
-    if (q.choices) {
-      body = h('div.choices', null, q.choices.map((c) => h('button', { type: 'button', onclick: (e) => {
-        if (done) return;
-        grade(c);
-        body.querySelectorAll('button').forEach((b) => { b.disabled = true; if (b.textContent === q.answers[0]) b.classList.add('ok'); else if (b === e.currentTarget) b.classList.add('no'); });
-      } }, c)));
-    } else {
-      const input = h('input.answer' + (q.lang === 'fr' ? '.fr' : ''), { type: 'text', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', lang: q.lang, 'aria-label': q.ask });
-      const checkBtn = h('button.btn.primary', { type: 'button', onclick: () => submit() }, 'Check');
-      const submit = () => { const r = grade(input.value); if (r) { input.classList.add(r.ok ? 'ok' : 'no'); input.readOnly = true; checkBtn.hidden = true; } };
-      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); done ? nextBtn.click() : submit(); } });
-      const keys = q.lang === 'fr' ? h('div.keys', { 'aria-label': 'Accented letters' }, ['é', 'è', 'ê', 'à', 'â', 'ç', 'ï', 'î', 'ô', 'û'].map((c) => h('button', { type: 'button', tabindex: '-1', onclick: () => {
-        if (done) return;
-        const s = input.selectionStart ?? input.value.length, e2 = input.selectionEnd ?? s;
-        input.value = input.value.slice(0, s) + c + input.value.slice(e2); input.focus(); input.setSelectionRange(s + 1, s + 1);
-      } }, c))) : null;
-      body = h('div', null, input, keys, h('div.row', { style: 'margin-top:14px' }, checkBtn));
-      setTimeout(() => input.focus(), 0);
-    }
-    wrap.replaceChildren(
-      h('div.row', { style: 'justify-content:space-between;margin-bottom:10px' }, counter, h('button.btn', { type: 'button', onclick: finish }, len ? 'Stop' : 'Finish')),
-      len ? h('div.bar', null, fill) : null,
-      h('div.panel', null,
-        h('div.ask', null, q.ask),
-        h('div.show' + (q.showLang === 'fr' ? '.fr' : '.en'), { lang: q.showLang }, q.show),
-        q.sub ? h('p.sub', null, q.sub) : h('div', { style: 'height:14px' }),
-        body, fb,
-        h('div.row', { style: 'margin-top:14px' }, nextBtn)));
-  }
-  function finish() {
-    const total = done ? n + 1 : n;
-    wrap.replaceChildren(h('div.panel.stack', null,
-      h('div.ask', null, 'Done'),
-      h('div', null, h('span.score', null, right + ' / ' + total), h('span.muted', null, ' right')),
-      missed.length ? h('div', null, h('h2', null, 'To look at again'), h('ul.missed', null, missed.map(({ q, given }) => h('li', null,
-        h('span' + (q.showLang === 'fr' ? '.fr' : ''), null, q.show), ' → ', h('b' + (q.lang === 'en' ? '' : '.fr'), null, q.answers[0]),
-        given ? h('span.muted', null, ' (you: ' + given + ')') : null)))) : h('p', null, 'Nothing missed.'),
-      h('div.row', null, h('button.btn.primary', { type: 'button', onclick: () => startSession(topics, len, words) }, 'Again'), h('button.btn', { type: 'button', onclick: () => go('home') }, 'Dashboard'))));
-  }
-  next();
-  return wrap;
-}
-
-/* ---------- words ---------- */
-function Words() {
-  const group = (g) => h('section.panel', null, h('h2', null, GROUPS[g]), h('div.scroll', null, h('table', null,
-    h('thead', null, h('tr', null, ['Masc. sg.', 'Meaning', 'Fem. sg.', 'Masc. pl.', 'Fem. pl.'].map((t) => h('th', null, t)))),
-    h('tbody', null, ADJ.filter((a) => a.group === g).map((a) => h('tr', null,
-      h('td.fr.m', { lang: 'fr' }, a.f[0], a.alt ? h('span.tag.warm', { title: 'before a vowel or silent h' }, a.alt) : null),
-      h('td', null, a.en.join(', '), a.before ? h('span.tag', null, 'before') : null, mastered(a.id) ? h('span.tag.good', null, 'mastered') : null, a.note ? h('div.note', null, a.note) : null),
-      h('td.fr.f', { lang: 'fr' }, a.f[1]), h('td.fr.m', { lang: 'fr' }, a.f[2]), h('td.fr.f', { lang: 'fr' }, a.f[3])))))));
-  return h('div', null,
-    h('h1', null, 'Words'),
-    h('p.lede', null, 'Leçon 3A1. Every adjective with its four forms. “Before” marks the 11 that go in front of the noun; the orange tag is the extra form used before a vowel or silent h.'),
-    h('div.stack', null, Object.keys(GROUPS).map(group)));
+function startGrammar(topics, len, words) {
+  const help = h('div.help', { role: 'complementary', 'aria-label': 'Rule help' });
+  const run = Run({ title: 'Grammar', total: len, next: (n) => (len && n >= len ? null : question(topics, words)), aside: (q) => help.replaceChildren(helpFor([q.topic])) });
+  show('grammar', h('div.with-help', null, run, help));
 }
 
 /* ---------- rules ---------- */
+const ex = (pairs) => h('div.ex', null, pairs.flatMap(([en, fr]) => [h('div.en-ex.muted', null, en), h('div.fr', { lang: 'fr' }, fr)]));
+const card = (title, ...kids) => h('section.panel', null, h('h2', null, title), ...kids);
+const RULES = {
+  agree: () => card('Agreement',
+    h('p', null, 'Adjectives match the noun: add ', h('b', null, '-e'), ' for feminine, ', h('b', null, '-s'), ' for plural.'),
+    ex([['a green bird', 'un oiseau vert'], ['a green house', 'une maison verte'], ['green birds', 'des oiseaux verts'], ['The houses are green.', 'Les maisons sont vertes.']]),
+    h('p.note', null, 'Already ends in -e (jeune, raide): no extra -e. Marron never changes. Before a vowel, le / la become l’: l’ami, l’histoire.')),
+  before: () => card('11 adjectives go before the noun',
+    h('p.big', { lang: 'fr' }, BEFORE.map((w, i) => [i ? ' · ' : '', h('b', null, w[0].toUpperCase()), w.slice(1)])),
+    h('p.note', null, 'Everything else goes after the noun.'),
+    ex([['a small intellectual man', 'un petit homme intellectuel'], ['a new French story', 'une nouvelle histoire française'], ['a young beautiful dog', 'un jeune et beau chien'], ['an ugly green bird', 'un oiseau laid et vert']])),
+  irr: () => card('Irregular patterns',
+    h('div.scroll', null, h('table', null, h('tbody', null, [
+      ['-eux → -euse', 'heureux, heureuse'], ['-el → -elle', 'intellectuel, intellectuelle'], ['-f → -ve', 'naïf, naïve'],
+      ['-er → -ère', 'fier, fière'], ['-on → -onne', 'bon, bonne'], ['-g → -gue', 'long, longue'], ['-s doubles', 'gros, grosse'],
+      ['-eau → -elle', 'beau, belle · nouveau, nouvelle'], ['others', 'vieux, vieille · roux, rousse'],
+    ].map(([p, e]) => h('tr', null, h('td', null, p), h('td.fr', { lang: 'fr' }, e)))))),
+    h('p.note', null, 'Many English adjectives in -ous are -eux in French: curious → curieux, nervous → nerveux. -x words don’t add -s in the plural: heureux, gros, vieux.')),
+  bel: () => card('bel, nouvel, vieil',
+    h('p', null, 'Three adjectives have a second masculine singular form, used before a vowel or silent h.'),
+    ex([['a new book', 'un nouveau livre'], ['a new friend', 'un nouvel ami'], ['a beautiful high school', 'un beau lycée'], ['a handsome man', 'un bel homme (h muet)'], ['an old backpack', 'un vieux sac à dos'], ['an old bird', 'un vieil oiseau']]),
+    h('p.note', null, 'Only masculine singular. In the plural it’s back to nouveaux, beaux, vieux.')),
+  de: () => card('de, not des',
+    h('p', null, 'When a plural adjective comes before the noun, use ', h('b', null, 'de'), ' instead of ', h('b', null, 'des'), '.'),
+    ex([['new friends', 'de nouveaux amis'], ['nice friends', 'des amis sympathiques'], ['beautiful high schools', 'de beaux lycées']])),
+  hair: () => card('Hair',
+    h('p', null, 'Four special adjectives describe hair: ', h('span.fr', { lang: 'fr' }, 'brun, châtain, blond, roux'), '. Used for the person, they agree with the person:'),
+    ex([['He is black-haired.', 'Il est brun.'], ['She is brown-haired.', 'Elle est châtain.'], ['They are blond.', 'Ils sont blonds.'], ['They (f.) are red-haired.', 'Elles sont rousses.']]),
+    h('p', null, h('span.fr', { lang: 'fr' }, 'Les cheveux'), ' is always masculine plural, even for a girl:'),
+    ex([['He has black hair.', 'Il a les cheveux bruns.'], ['She has brown hair.', 'Elle a les cheveux châtains.'], ['She has red hair.', 'Elle a les cheveux roux.']])),
+};
 function Rules() {
-  const ex = (pairs) => h('div.ex', null, pairs.flatMap(([en, fr]) => [h('div.en-ex.muted', null, en), h('div.fr', { lang: 'fr' }, fr)]));
-  const card = (title, ...kids) => h('section.panel', null, h('h2', null, title), ...kids);
   return h('div', null,
     h('h1', null, 'Rules'),
-    h('p.lede', null, 'From the Leçon 3A1 notes.'),
-    h('div.rules', null,
-      card('Agreement',
-        h('p', null, 'Adjectives match the noun: add ', h('b', null, '-e'), ' for feminine, ', h('b', null, '-s'), ' for plural.'),
-        ex([['a green bird', 'un oiseau vert'], ['a green house', 'une maison verte'], ['green birds', 'des oiseaux verts'], ['green houses', 'des maisons vertes']]),
-        h('p.note', null, 'Already ends in -e (jeune, raide): no extra -e. Marron never changes.')),
-      card('11 adjectives go before the noun',
-        h('p.big', { lang: 'fr' }, BEFORE.map((w, i) => [i ? ' · ' : '', h('b', null, w[0].toUpperCase()), w.slice(1)])),
-        h('p.note', null, 'Everything else goes after the noun.'),
-        ex([['a small intellectual man', 'un petit homme intellectuel'], ['a new French story', 'une nouvelle histoire française'], ['a young beautiful dog', 'un jeune et beau chien'], ['an ugly green bird', 'un oiseau laid et vert']])),
-      card('Irregular patterns',
-        h('div.scroll', null, h('table', null, h('tbody', null, [
-          ['-eux → -euse', 'heureux, heureuse'], ['-el → -elle', 'intellectuel, intellectuelle'], ['-f → -ve', 'naïf, naïve'],
-          ['-er → -ère', 'fier, fière'], ['-on → -onne', 'bon, bonne'], ['-g → -gue', 'long, longue'], ['-s doubles', 'gros, grosse'],
-          ['-eau → -elle', 'beau, belle · nouveau, nouvelle'], ['others', 'vieux, vieille · roux, rousse'],
-        ].map(([p, e]) => h('tr', null, h('td', null, p), h('td.fr', { lang: 'fr' }, e)))))),
-        h('p.note', null, 'Many English adjectives in -ous are -eux in French: curious → curieux, nervous → nerveux. -x words don’t add -s in the plural: heureux, gros, vieux.')),
-      card('bel, nouvel, vieil',
-        h('p', null, 'Three adjectives have a second masculine singular form, used before a vowel or silent h.'),
-        ex([['a new book', 'un nouveau livre'], ['a new friend', 'un nouvel ami'], ['a beautiful high school', 'un beau lycée'], ['a handsome man', 'un bel homme (h muet)'], ['an old backpack', 'un vieux sac à dos'], ['an old bird', 'un vieil oiseau']]),
-        h('p.note', null, 'Only masculine singular. In the plural it’s back to nouveaux, beaux, vieux.')),
-      card('de, not des',
-        h('p', null, 'When a plural adjective comes before the noun, use ', h('b', null, 'de'), ' instead of ', h('b', null, 'des'), '.'),
-        ex([['new friends', 'de nouveaux amis'], ['nice friends', 'des amis sympathiques'], ['beautiful high schools', 'de beaux lycées']])),
-      card('Hair',
-        h('p', null, 'Four special adjectives describe hair: ', h('span.fr', { lang: 'fr' }, 'brun, châtain, blond, roux'), '. Used for the person, they agree with the person:'),
-        ex([['He is black-haired.', 'Il est brun.'], ['She is brown-haired.', 'Elle est châtain.'], ['They are blond.', 'Ils sont blonds.'], ['They (f.) are red-haired.', 'Elles sont rousses.']]),
-        h('p', null, h('span.fr', { lang: 'fr' }, 'Les cheveux'), ' is always masculine plural, even for a girl:'),
-        ex([['He has black hair.', 'Il a les cheveux bruns.'], ['She has brown hair.', 'Elle a les cheveux châtains.'], ['She has red hair.', 'Elle a les cheveux roux.']]))));
+    h('p.lede', null, 'Grammar from the Leçon 3A1 notes.'),
+    h('div.rules', null, Object.values(RULES).map((r) => r())));
+}
+
+/* ---------- dashboard ---------- */
+function Home() {
+  const l = ADJ.filter((a) => learned(a.id)).length, due = dueWords(), fresh = newWords(), tr = trouble();
+  const today = P.days[dayKey()] || 0, streak = dayStreak(), gacc = grammarAcc();
+  const tried = GRAMMAR.filter(([t]) => (P.topics[t] || {}).n);
+  const acc = (t) => pct(P.topics[t].r, P.topics[t].n);
+  const untried = GRAMMAR.find(([t]) => !(P.topics[t] || {}).n);
+  const nextG = untried || (tried.length ? tried.reduce((a, b) => (acc(a[0]) <= acc(b[0]) ? a : b)) : null);
+  const tile = (label, num, sub) => h('div.panel.tile', null, h('div.ask', null, label), h('div.num', null, ...num), h('div.note', null, sub));
+  const act = (label, fn, primary) => h('button.btn' + (primary ? '.primary' : ''), { type: 'button', onclick: fn }, label, h('span', { 'aria-hidden': 'true' }, '→'));
+  return h('div', null,
+    h('h1', null, new Date().getHours() < 18 ? 'Bonjour !' : 'Bonsoir !'),
+    h('p.lede', null, due.length ? 'You have ' + due.length + ' word' + (due.length === 1 ? '' : 's') + ' to review. Do those first, they’re about to slip.' : l ? 'No reviews due. Learn some new words or drill the grammar.' : 'Start by learning your first 5 words.'),
+    h('div.tiles', null,
+      tile('Words learned', [String(l), h('small', null, ' / ' + ADJ.length)], fresh.length ? fresh.length + ' still new' : 'all learned'),
+      tile('Due now', [String(due.length)], due.length ? 'words to review' : 'next ' + when(nextDue())),
+      tile('Streak', [String(streak)], (streak === 1 ? 'day' : 'days in a row') + ' · ' + today + ' answers today'),
+      tile('Grammar', [gacc == null ? '–' : gacc + '%'], gacc == null ? 'not started' : 'accuracy')),
+    h('div.dash', null,
+      h('div.stack', null,
+        h('section.panel', null, h('h2', null, 'Next up'),
+          h('div.actions', null,
+            due.length ? act('Review ' + Math.min(20, due.length) + ' due words', () => show('vocab', Review(due.slice(0, 20).map((a) => a.id), true)), true) : null,
+            fresh.length ? act('Learn the next ' + Math.min(5, fresh.length) + ' words', () => show('vocab', Learn(fresh.slice(0, 5).map((a) => a.id))), !due.length) : null,
+            nextG ? act((untried ? 'Grammar, try: ' : 'Grammar, weakest: ') + nextG[1], () => startGrammar([nextG[0]], 10)) : null,
+            tr.length ? act('Practise trouble words (' + tr.length + ')', () => show('vocab', Review(tr.map((a) => a.id), false))) : null),
+          tr.length ? h('div.chips', { lang: 'fr' }, tr.map((a) => h('span', null, a.id))) : null),
+        h('section.panel', null, h('h2', null, 'Lessons'),
+          LESSONS.map((le) => {
+            const ws = ADJ.filter((a) => a.lesson === le.id), lm = ws.filter((a) => learned(a.id)).length;
+            return h('div.lesson', null, h('div.code', null, le.id),
+              h('div.lesson-body', null, h('b', null, le.title + ' · ' + le.sub), h('div.note', null, lm + ' of ' + ws.length + ' words learned'), h('div', { style: 'margin-top:6px' }, meter((lm / ws.length) * 100, 'good'))),
+              h('button.btn', { type: 'button', onclick: () => go('vocab') }, 'Vocab'));
+          }))),
+      h('section.panel', null, h('h2', null, 'Grammar drills'),
+        h('p.note', { style: 'margin:0 0 6px' }, 'Your accuracy in each. Tap one to practise it with its rule beside you.'),
+        GRAMMAR.map(([t, label]) => {
+          const x = P.topics[t], v = x ? pct(x.r, x.n) : null;
+          return h('div.drow', null,
+            h('button', { type: 'button', onclick: () => startGrammar([t], 10) }, label),
+            meter(v, v == null ? null : v >= 80 ? 'good' : v < 60 ? 'low' : null),
+            h('span.pct', null, v == null ? 'new' : v + '%'));
+        }))));
 }
 
 go(location.hash.slice(1));

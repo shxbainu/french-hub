@@ -57,16 +57,15 @@
     N('histoire', 'histoires', 'f', 'story', 'stories', 't', 1), N('école', 'écoles', 'f', 'school', 'schools', 't', 1),
   ];
 
-  const TOPICS = [
-    ['fr-en', 'Meaning: French → English'],
-    ['en-fr', 'Meaning: English → French'],
-    ['forms', 'The four forms'],
-    ['place', 'Before or after the noun?'],
-    ['phrase', 'Write the phrase'],
-    ['bel', 'bel, nouvel, vieil'],
-    ['de', 'de or des?'],
-    ['hair', 'Hair'],
+  // Vocab drills feed the spaced-repetition review; grammar drills are sentence work with a rule beside them.
+  const VOCAB = [['fr-en', 'Meaning: French → English'], ['en-fr', 'Meaning: English → French'], ['forms', 'The four forms']];
+  const GRAMMAR = [
+    ['sent', 'Sentences'], ['phrase', 'Write the phrase'], ['place', 'Before or after the noun?'],
+    ['bel', 'bel, nouvel, vieil'], ['de', 'de or des?'], ['hair', 'Hair'],
   ];
+  const TOPICS = VOCAB.concat(GRAMMAR);
+  // Which rule cards to show beside each grammar drill (ids of the cards on the Rules page).
+  const RULE_OF = { sent: ['agree', 'before'], phrase: ['before', 'agree'], place: ['before'], bel: ['bel'], de: ['de'], hair: ['hair'] };
 
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
   // focus: word ids to drill (trouble words); falls back to every word when none fit the question.
@@ -104,6 +103,15 @@
       : 'Most adjectives go after the noun. Only these 11 go before: ' + BEFORE.join(', ') + '.';
   }
 
+  const cap = (x) => x[0].toUpperCase() + x.slice(1);
+  const theNoun = (n, pl) => (pl ? 'les ' + n.pl : n.v ? "l'" + n.sg : (n.g === 'f' ? 'la ' : 'le ') + n.sg);
+  // "The girls are happy." → "Les filles sont heureuses."  brun / châtain work here for people.
+  function predicate(a, n, pl) {
+    const form = a.f[slotOf(n.g, pl)];
+    return { fr: cap(theNoun(n, pl)) + (pl ? ' sont ' : ' est ') + form + '.', en: 'The ' + (pl ? n.enp : n.en) + (pl ? ' are ' : ' is ') + a.en[0] + '.', form };
+  }
+  const fitsPred = (a, n) => (a.on ? fits(a, n) : n.k === 'p');
+
   const Q = {
     'fr-en'() {
       const a = pick(pool());
@@ -114,9 +122,25 @@
       return { topic: 'en-fr', word: a.id, ask: 'In French (masculine singular)', show: a.en[0], showLang: 'en', lang: 'fr', answers: [a.f[0]], why: a.en[0] + ' = ' + a.f.join(', ') + '.' + (a.note ? ' ' + a.note : '') };
     },
     forms() {
-      const a = pick(pool((x) => x.id !== 'marron' || Math.random() < 0.3));
+      const a = pick(pool());
       const i = 1 + Math.floor(Math.random() * 3);
       return { topic: 'forms', word: a.id, ask: 'Give the ' + SLOT[i], show: a.f[0], showLang: 'fr', sub: a.en[0], lang: 'fr', answers: [a.f[i]], why: whyForm(a, i) };
+    },
+    sent() {
+      if (Math.random() < 0.5) {
+        const a = pick(pool((x) => x.on || x.id === 'brun' || x.id === 'châtain'));
+        const n = pick(NOUNS.filter((x) => fitsPred(a, x)));
+        const pl = Math.random() < 0.45, p = predicate(a, n, pl);
+        return { topic: 'sent', word: a.id, ask: 'Write it in French', show: p.en, showLang: 'en', lang: 'fr', answers: [p.fr],
+          why: 'The adjective agrees with ' + theNoun(n, pl) + ' (' + (n.g === 'f' ? 'feminine' : 'masculine') + (pl ? ' plural' : ' singular') + '): ' + p.form + '.' + (a.note ? ' ' + a.note : '') };
+      }
+      const a = pick(pool((x) => x.on));
+      const n = pick(NOUNS.filter((x) => fits(a, x)));
+      const pl = Math.random() < 0.4, p = phrase(a, n, pl);
+      const bits = [whyPlace(a)];
+      if (p.form === a.alt) bits.push(a.alt + ' before a vowel or silent h.');
+      if (pl && a.before) bits.push('Plural adjective before the noun: de, not des.');
+      return { topic: 'sent', word: a.id, ask: 'Write it in French', show: 'I have ' + p.en + '.', showLang: 'en', lang: 'fr', answers: ["J'ai " + p.fr + '.'], why: bits.join(' ') };
     },
     place() {
       const a = pick(pool((x) => x.on));
@@ -189,7 +213,42 @@
     return { ok: false, accent: false };
   }
 
-  const api = { ADJ, LESSONS, GROUPS, SLOT, BEFORE, NOUNS, TOPICS, Q, question, check, phrase, formFor, byId };
+  // FSRS-4.5, copied from Jenney's Latin Hub (src/fsrs.js). Grades: 1 again, 2 hard, 3 good, 4 easy.
+  const W = [0.4872, 1.4003, 3.7145, 13.8206, 5.1618, 1.2298, 0.8975, 0.031, 1.6474, 0.1367, 1.0461, 2.1072, 0.0793, 0.3246, 1.587, 0.2272, 2.8755];
+  const DECAY = -0.5, FACTOR = 19 / 81, DAY = 86400000, MIN = 60000;
+  const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
+  const initS = (g) => W[g - 1];
+  const initD = (g) => clamp(W[4] - Math.exp(W[5] * (g - 1)) + 1, 1, 10);
+  const nextD = (D, g) => clamp(W[7] * initD(4) + (1 - W[7]) * (D - W[6] * (g - 3)), 1, 10);
+  const sRecall = (D, S, R, g) => S * (1 + Math.exp(W[8]) * (11 - D) * Math.pow(S, -W[9]) * (Math.exp(W[10] * (1 - R)) - 1) * (g === 2 ? W[15] : 1) * (g === 4 ? W[16] : 1));
+  const sForget = (D, S, R) => Math.min(S, W[11] * Math.pow(D, -W[12]) * (Math.pow(S + 1, W[13]) - 1) * Math.exp(W[14] * (1 - R)));
+  function retrievability(c, now) {
+    if (!c || !c.S || !c.last) return 0;
+    return Math.pow(1 + (FACTOR * Math.max(0, (now - c.last) / DAY)) / c.S, DECAY);
+  }
+  const intervalDays = (S, r) => (S / FACTOR) * (Math.pow(r, 1 / DECAY) - 1);
+  function review(prev, g, now, r = 0.9) {
+    const c = prev ? { ...prev } : { reps: 0, lapses: 0, state: 'new' };
+    c.reps++;
+    let due;
+    if (c.state === 'new' || !c.S) {
+      c.S = initS(g); c.D = initD(g); c.state = 'learning';
+      due = now + (g === 1 ? MIN : 10 * MIN);
+    } else if (c.state === 'learning' || c.state === 'relearning') {
+      c.D = nextD(c.D, g);
+      if (g === 1) due = now + MIN;
+      else { c.state = 'review'; due = now + Math.max(0.5, intervalDays(c.S, r)) * DAY; }
+    } else {
+      const R = retrievability(c, now);
+      c.D = nextD(c.D, g);
+      if (g === 1) { c.lapses++; c.S = Math.max(0.1, sForget(c.D, c.S, R)); c.state = 'relearning'; due = now + 5 * MIN; }
+      else { c.S = Math.min(365, sRecall(c.D, c.S, R, g)); due = now + Math.max(1, intervalDays(c.S, r)) * DAY * (0.95 + Math.random() * 0.1); }
+    }
+    c.last = now; c.due = Math.round(due); c.g = g;
+    return c;
+  }
+
+  const api = { ADJ, LESSONS, GROUPS, SLOT, BEFORE, NOUNS, TOPICS, VOCAB, GRAMMAR, RULE_OF, Q, review, retrievability, DAY, MIN, question, check, phrase, formFor, byId };
   if (typeof module !== 'undefined') module.exports = api;
   else window.FR = api;
 })();
