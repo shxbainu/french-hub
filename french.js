@@ -215,7 +215,8 @@
   };
   function question(topics, words) { focus = words || []; return Q[pick(topics)](); }
 
-  // Answer checking: case, spacing and apostrophes don't matter; a missing accent still counts but is flagged.
+  // Answer checking: case, spacing and apostrophes don't matter. In French, accents do: "fiere" for "fière" is wrong,
+  // flagged with accent: true so the card can say so. English answers ignore accents ("naive" = "naïve").
   const norm = (s) => s.toLowerCase().replace(/[’‘`]/g, "'").replace(/[.!?]+$/, '').replace(/\s+/g, ' ').trim();
   const bare = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '');
   const enNorm = (s) => norm(s).replace(/^(a|an|the|to be|to) /, '').replace(/-/g, ' ');
@@ -223,11 +224,9 @@
     const n = q.lang === 'en' ? enNorm : norm;
     const got = n(input || '');
     if (!got) return { ok: false, accent: false };
-    for (const ans of q.answers) {
-      const want = n(ans);
-      if (got === want) return { ok: true, accent: false };
-      if (bare(got) === bare(want)) return { ok: true, accent: true };
-    }
+    const wants = q.answers.map(n);
+    if (wants.includes(got)) return { ok: true, accent: false };
+    if (wants.some((w) => bare(w) === bare(got))) return q.lang === 'en' ? { ok: true, accent: false } : { ok: false, accent: true };
     return { ok: false, accent: false };
   }
 

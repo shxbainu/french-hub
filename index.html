@@ -419,6 +419,7 @@ function QCard(q, onDone) {
     else if (q.choices) per = [{ ok: values[0] === q.answers[0] }];
     else per = cells.map((c, i) => cellCheck(c, values[i]));
     res = { ok: per.every((p) => p.ok), accent: per.some((p) => p.accent), per, given: gaveUp ? cells.map(() => '') : values };
+    res.accentOnly = !res.ok && per.every((p) => p.ok || p.accent); // right letters, wrong or missing accents
     record(q, res.ok);
     hintEl.hidden = true;
     controls.hidden = true;
@@ -429,12 +430,13 @@ function QCard(q, onDone) {
     const nextBtn = h('button.btn.primary', { type: 'button', onclick: finish }, 'Next →');
     const right = res.per.filter((p) => p.ok).length;
     const parts = [h('div.verdict.' + (ok ? 'ok' : 'no'), null, ok ? drawCheck() : '✕',
-      ok ? (res.accent ? 'Right · watch the accent' : hinted ? 'Right, with a hint' : 'Correct') : multi ? right + ' of ' + cells.length + ' right' : 'Not quite')];
+      ok ? (hinted ? 'Right, with a hint' : 'Correct') : multi ? right + ' of ' + cells.length + ' right' + (res.accent ? ' · check the accents' : '') : res.accentOnly ? 'Accent missing' : 'Not quite')];
     if (multi) {
       // Each form with the right answer under it; the ones you missed are highlighted where they differ.
-      parts.push(h('div.formgrid.result-grid', null, cells.map((c, i) => h('div.cell.' + (res.per[i].ok && !res.per[i].accent ? 'ok' : res.per[i].ok ? 'acc' : 'no'), null,
-        h('small', null, SHORT[c.label] || c.label), res.per[i].ok && !res.per[i].accent ? h('div.gold.small', { lang: 'fr' }, c.answers[0]) : diff(c.answers[0], res.given[i], false)))));
-    } else if (!ok || res.accent) parts.push(diff(q.answers[0], res.given[0], q.lang === 'en'));
+      parts.push(h('div.formgrid.result-grid', null, cells.map((c, i) => h('div.cell.' + (res.per[i].ok ? 'ok' : res.per[i].accent ? 'acc' : 'no'), null,
+        h('small', null, SHORT[c.label] || c.label, res.per[i].accent ? ' · accent' : ''), res.per[i].ok ? h('div.gold.small', { lang: 'fr' }, c.answers[0]) : diff(c.answers[0], res.given[i], false)))));
+    } else if (!ok) parts.push(diff(q.answers[0], res.given[0], q.lang === 'en'));
+    if (res.accent) parts.push(h('div.note-box', null, h('b', null, 'Accents count. '), 'é, è, ê, ç, ï… are part of the spelling: the highlighted letter needs its accent. Use the buttons under the box, or hold the letter on a Mac keyboard.'));
     if (q.full) parts.push(h('div.translation', null, h('span.fr', { lang: 'fr' }, q.full), h('span.muted', null, q.en)));
     else if (q.showLang === 'en' && q.lang === 'fr' && ok && !multi) parts.push(h('div.translation', null, h('span.fr', { lang: 'fr' }, q.answers[0]), h('span.muted', null, q.show)));
     if (!ok || q.full || q.topic === 'forms') parts.push(h('div.note-box', null, h('b', null, ok ? 'Why. ' : 'Rule. '), q.why));
@@ -464,7 +466,7 @@ function QCard(q, onDone) {
       h('span.note', { style: 'margin-left:auto' }, h('span.kbd', null, 'Enter'), ' next')));
     result.replaceChildren(...parts);
     fadeUp(result);
-    if (ok) timer = setTimeout(finish, res.accent ? 2200 : q.full || multi ? 1900 : 1100);
+    if (ok) timer = setTimeout(finish, q.full || multi ? 1900 : 1100);
     if (ok || q.choices) nextBtn.focus();
     keyHandler = (e) => { if (e.key === 'Enter' && e.target.tagName !== 'BUTTON' && !(e.target.dataset && e.target.dataset.retype) && !nextBtn.disabled) { e.preventDefault(); finish(); } };
   }

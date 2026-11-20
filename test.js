@@ -19,7 +19,10 @@ assert.equal(phrase(A.marron, N.chat, true).fr, 'des chats marron');
 // Answer checking.
 const q = { lang: 'fr', answers: ['fière'] };
 assert.deepEqual(check(q, ' Fière '), { ok: true, accent: false });
-assert.deepEqual(check(q, 'fiere'), { ok: true, accent: true });
+assert.deepEqual(check(q, 'fiere'), { ok: false, accent: true }); // accents count in French
+assert.deepEqual(check(q, 'fièré'), { ok: false, accent: true });
+assert.deepEqual(check({ lang: 'en', answers: ['naïve', 'innocent'] }, 'naive'), { ok: true, accent: false }); // not in English
+assert.equal(check({ lang: 'fr', answers: ['châtain'] }, 'chatain').ok, false);
 assert.equal(check(q, 'fier').ok, false);
 assert.equal(check(q, '').ok, false);
 assert.equal(check({ lang: 'en', answers: ['black-haired'] }, 'black haired').ok, true);
