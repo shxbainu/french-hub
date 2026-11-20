@@ -10,7 +10,7 @@
 /* Paper and ink, with a tricolore accent: rouge for actions, bleu for masculine, framboise for feminine. */
 :root {
   --bg: 250 246 239; --surface: 255 253 249; --sunken: 243 237 227; --ink: 28 33 58; --muted: 100 100 116; --line: 229 220 205;
-  --accent: 186 40 56; --accent-soft: 250 229 229; --accent-ink: 255 255 255; --navy: 28 45 102;
+  --accent: 186 40 56; --accent-soft: 250 229 229; --accent-ink: 255 255 255; --navy: 28 45 102; --side: 24 34 78; --side-ink: 240 236 226;
   --good: 34 118 80; --good-soft: 226 241 232; --bad: 186 40 56; --bad-soft: 250 229 229;
   --warm: 158 112 30; --warm-soft: 247 237 214; --gf: 178 56 118; --gm: 36 76 156;
   color-scheme: light;
@@ -18,7 +18,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: 20 22 34; --surface: 29 31 46; --sunken: 38 40 58; --ink: 241 235 222; --muted: 168 164 160; --line: 56 56 74;
-    --accent: 242 118 126; --accent-soft: 70 36 46; --accent-ink: 20 22 34; --navy: 150 176 240;
+    --accent: 242 118 126; --accent-soft: 70 36 46; --accent-ink: 20 22 34; --navy: 150 176 240; --side: 13 15 26; --side-ink: 236 232 222;
     --good: 108 200 150; --good-soft: 30 52 42; --bad: 242 118 126; --bad-soft: 70 36 46;
     --warm: 226 182 100; --warm-soft: 60 48 26; --gf: 236 132 186; --gm: 132 168 240;
     color-scheme: dark;
@@ -26,7 +26,7 @@
 }
 :root[data-theme="dark"] {
   --bg: 20 22 34; --surface: 29 31 46; --sunken: 38 40 58; --ink: 241 235 222; --muted: 168 164 160; --line: 56 56 74;
-  --accent: 242 118 126; --accent-soft: 70 36 46; --accent-ink: 20 22 34; --navy: 150 176 240;
+  --accent: 242 118 126; --accent-soft: 70 36 46; --accent-ink: 20 22 34; --navy: 150 176 240; --side: 13 15 26; --side-ink: 236 232 222;
   --good: 108 200 150; --good-soft: 30 52 42; --bad: 242 118 126; --bad-soft: 70 36 46;
   --warm: 226 182 100; --warm-soft: 60 48 26; --gf: 236 132 186; --gm: 132 168 240;
   color-scheme: dark;
@@ -42,18 +42,44 @@ button { cursor: pointer; }
 .muted { color: rgb(var(--muted)); }
 .f { color: rgb(var(--gf)); } .m { color: rgb(var(--gm)); }
 
-/* Top bar instead of a sidebar; one centered reading column. */
-.shell { min-height: 100vh; }
-aside { position: sticky; top: 0; z-index: 2; background: rgb(var(--bg) / 0.92); backdrop-filter: blur(8px); border-bottom: 1px solid rgb(var(--line)); }
-.topbar { max-width: 960px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; gap: 24px; height: 64px; }
-.brand { display: flex; align-items: center; gap: 12px; font: 700 24px/1 'Cormorant Garamond', Georgia, serif; color: rgb(var(--navy)); white-space: nowrap; }
-.flag { display: flex; width: 26px; height: 18px; border-radius: 3px; overflow: hidden; box-shadow: 0 0 0 1px rgb(var(--line)); }
-.flag i { flex: 1; } .flag i:nth-child(1) { background: #1f3f94; } .flag i:nth-child(2) { background: #fff; } .flag i:nth-child(3) { background: #d42f3f; }
-nav { display: flex; gap: 4px; margin-left: auto; height: 100%; }
-nav button { border: 0; background: none; padding: 0 14px; font-weight: 700; font-size: 14px; letter-spacing: 0.02em; color: rgb(var(--muted)); border-bottom: 2px solid transparent; margin-bottom: -1px; }
-nav button:hover { color: rgb(var(--ink)); }
-nav button[aria-current] { color: rgb(var(--accent)); border-bottom-color: rgb(var(--accent)); }
-main { max-width: 960px; margin: 0 auto; padding: 40px 24px 72px; }
+/* Dashboard shell: a navy sidebar beside the work area. */
+.shell { max-width: 1320px; margin: 0 auto; display: flex; min-height: 100vh; }
+aside { width: 248px; flex-shrink: 0; position: sticky; top: 0; height: 100vh; padding: 28px 16px; display: flex; flex-direction: column; gap: 24px; background: rgb(var(--side)); color: rgb(var(--side-ink)); }
+.brand { display: flex; align-items: center; gap: 12px; padding: 0 8px; font: 700 26px/1 'Cormorant Garamond', Georgia, serif; white-space: nowrap; }
+.flag { display: flex; width: 26px; height: 18px; border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+.flag i { flex: 1; } .flag i:nth-child(1) { background: #2b52c4; } .flag i:nth-child(2) { background: #fff; } .flag i:nth-child(3) { background: #e03a4a; }
+nav { display: flex; flex-direction: column; gap: 2px; }
+nav button { display: flex; align-items: center; gap: 10px; border: 0; background: none; text-align: left; padding: 10px 12px; border-radius: 8px; font-weight: 600; color: rgb(var(--side-ink) / 0.72); position: relative; }
+nav button:hover { color: rgb(var(--side-ink)); background: rgb(255 255 255 / 0.05); }
+nav button[aria-current] { color: rgb(var(--side-ink)); background: rgb(255 255 255 / 0.1); }
+nav button[aria-current]::before { content: ''; position: absolute; left: 0; top: 9px; bottom: 9px; width: 3px; border-radius: 2px; background: #e03a4a; }
+nav .meta { margin-left: auto; font-size: 12px; opacity: 0.75; font-variant-numeric: tabular-nums; }
+nav .badge { margin-left: auto; background: #e03a4a; color: #fff; border-radius: 999px; padding: 1px 8px; font-size: 12px; font-weight: 700; }
+.side-foot { margin-top: auto; padding: 14px 12px; border-radius: 8px; background: rgb(255 255 255 / 0.06); font-size: 13px; }
+.side-foot .meter { background: rgb(255 255 255 / 0.15); margin-top: 8px; }
+.side-foot .meter i { background: #fff; }
+main { flex: 1; min-width: 0; padding: 36px 44px 72px; }
+
+/* dashboard */
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px; }
+.tile .num { font: 700 42px/1 'Cormorant Garamond', Georgia, serif; color: rgb(var(--navy)); margin: 6px 0 4px; font-variant-numeric: tabular-nums; }
+.tile .num small { font-size: 22px; color: rgb(var(--muted)); }
+.dash { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.meter { height: 7px; border-radius: 4px; background: rgb(var(--sunken)); overflow: hidden; }
+.meter i { display: block; height: 100%; background: rgb(var(--navy)); border-radius: 4px; }
+.meter.good i { background: rgb(var(--good)); } .meter.low i { background: rgb(var(--accent)); }
+.drow { display: grid; grid-template-columns: minmax(0, 1fr) 120px 44px; gap: 12px; align-items: center; padding: 9px 0; border-bottom: 1px solid rgb(var(--line)); }
+.drow:last-child { border-bottom: 0; }
+.drow button { border: 0; background: none; padding: 0; text-align: left; font-weight: 600; color: rgb(var(--ink)); }
+.drow button:hover { color: rgb(var(--accent)); }
+.drow .pct { text-align: right; font-size: 13px; color: rgb(var(--muted)); font-variant-numeric: tabular-nums; }
+.actions { display: flex; flex-direction: column; gap: 10px; }
+.actions .btn { justify-content: space-between; width: 100%; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chips span { border: 1px solid rgb(var(--accent) / 0.35); color: rgb(var(--accent)); border-radius: 999px; padding: 2px 10px; font: 600 17px 'Cormorant Garamond', Georgia, serif; }
+.lesson { display: flex; align-items: center; gap: 14px; }
+.lesson .code { width: 52px; height: 52px; border-radius: 8px; background: rgb(var(--accent-soft)); color: rgb(var(--accent)); display: grid; place-items: center; font: 700 18px 'Cormorant Garamond', Georgia, serif; flex-shrink: 0; }
+.lesson-body { flex: 1; min-width: 0; }
 h1 { font: 700 44px/1.05 'Cormorant Garamond', Georgia, serif; margin: 0 0 8px; color: rgb(var(--navy)); }
 h2 { font: 700 23px/1.2 'Cormorant Garamond', Georgia, serif; margin: 0 0 10px; color: rgb(var(--navy)); }
 .lede { margin: 0 0 24px; color: rgb(var(--muted)); max-width: 62ch; }
@@ -108,6 +134,7 @@ th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: 
 td.fr { font-size: 18px; }
 .scroll { overflow-x: auto; }
 .tag { display: inline-block; border: 1px solid rgb(var(--accent) / 0.4); color: rgb(var(--accent)); border-radius: 4px; padding: 2px 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-left: 6px; vertical-align: 2px; }
+.tag.good { border-color: rgb(var(--good) / 0.5); color: rgb(var(--good)); }
 .tag.warm { border-color: rgb(var(--warm) / 0.5); color: rgb(var(--warm)); }
 .note { color: rgb(var(--muted)); font-size: 14px; }
 .ex { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px 20px; margin-top: 10px; }
@@ -116,34 +143,41 @@ td.fr { font-size: 18px; }
 .big b { color: rgb(var(--accent)); }
 .rules { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
 
+@media (max-width: 1180px) {
+  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dash { grid-template-columns: 1fr; }
+}
 @media (max-width: 760px) {
-  .topbar { padding: 0 16px; gap: 12px; height: 56px; }
-  .brand { font-size: 21px; }
-  nav button { padding: 0 9px; }
+  .shell { flex-direction: column; }
+  aside { position: static; height: auto; width: auto; padding: 12px 16px; flex-direction: row; align-items: center; gap: 12px; }
+  .brand { font-size: 21px; padding: 0; }
+  .brand b { display: none; }
+  nav { flex-direction: row; overflow-x: auto; }
+  nav button { white-space: nowrap; padding: 8px 10px; }
+  nav .meta, nav .badge, .side-foot { display: none; }
+  nav button[aria-current]::before { left: 10px; right: 10px; top: auto; bottom: 2px; width: auto; height: 2px; }
   main { padding: 24px 16px 48px; }
   h1 { font-size: 36px; }
   .show { font-size: 34px; }
   .rules { grid-template-columns: 1fr; }
   .ex { grid-template-columns: 1fr; }
   .ex .en-ex { margin-top: 6px; }
+  .drow { grid-template-columns: minmax(0, 1fr) 70px 40px; }
 }
 </style>
 </head>
 <body>
 <div class="shell">
   <aside>
-    <div class="topbar"><div class="brand"><span class="flag" aria-hidden="true"><i></i><i></i><i></i></span>French Hub</div>
-    <nav aria-label="Sections">
-      <button type="button" data-page="practice">Practice</button>
-      <button type="button" data-page="words">Words</button>
-      <button type="button" data-page="rules">Rules</button>
-    </nav></div>
+    <div class="brand"><span class="flag" aria-hidden="true"><i></i><i></i><i></i></span><b>French Hub</b></div>
+    <nav aria-label="Sections" id="nav"></nav>
+    <div class="side-foot" id="side-foot"></div>
   </aside>
   <main id="main"></main>
 </div>
 <script src="french.js"></script>
 <script>
-const { ADJ, GROUPS, BEFORE, TOPICS, question, check } = window.FR;
+const { ADJ, LESSONS, GROUPS, BEFORE, TOPICS, question, check } = window.FR;
 const $main = document.getElementById('main');
 
 // h('div.class', {attrs}, ...children): a tiny DOM builder. Strings become text nodes, so nothing is parsed as HTML.
@@ -163,23 +197,101 @@ const store = {
   set(k, v) { try { localStorage.setItem('frhub:' + k, JSON.stringify(v)); } catch (e) { /* private mode: fine */ } },
 };
 
+/* ---------- progress ---------- */
+// words: id → { n seen, r right, s right-in-a-row }; topics: id → { n, r }; days: 'YYYY-MM-DD' → answers.
+const P = Object.assign({ words: {}, topics: {}, days: {} }, store.get('progress', {}));
+const dayKey = (d = new Date()) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const MASTER = 3; // right this many times in a row = mastered
+function record(q, ok) {
+  const w = P.words[q.word] ||= { n: 0, r: 0, s: 0 };
+  w.n++; if (ok) { w.r++; w.s++; } else w.s = 0;
+  const t = P.topics[q.topic] ||= { n: 0, r: 0 };
+  t.n++; if (ok) t.r++;
+  P.days[dayKey()] = (P.days[dayKey()] || 0) + 1;
+  store.set('progress', P);
+}
+const mastered = (id) => (P.words[id] || {}).s >= MASTER;
+const trouble = () => ADJ.filter((a) => { const w = P.words[a.id]; return w && w.n && (w.s === 0 || (w.n >= 3 && w.r / w.n < 0.6)); });
+function dayStreak() {
+  const d = new Date(); let n = 0;
+  if (!P.days[dayKey(d)]) d.setDate(d.getDate() - 1);
+  while (P.days[dayKey(d)]) { n++; d.setDate(d.getDate() - 1); }
+  return n;
+}
+const pct = (r, n) => (n ? Math.round((r / n) * 100) : null);
+const meter = (v, cls) => h('div.meter' + (cls ? '.' + cls : ''), null, h('i', { style: 'width:' + (v || 0) + '%' }));
+
 /* ---------- pages ---------- */
-const PAGES = { practice: Practice, words: Words, rules: Rules };
+const PAGES = { home: Home, practice: Practice, words: Words, rules: Rules };
+const NAV = [['home', 'Dashboard'], ['practice', 'Practice'], ['words', 'Words'], ['rules', 'Rules']];
+function renderNav(page) {
+  const m = ADJ.filter((a) => mastered(a.id)).length, tr = trouble().length;
+  document.getElementById('nav').replaceChildren(...NAV.map(([id, label]) => h('button', { type: 'button', 'aria-current': id === page ? 'page' : null, onclick: () => go(id) }, label,
+    id === 'home' && tr ? h('span.badge', { title: tr + ' trouble words' }, String(tr)) : null,
+    id === 'words' ? h('span.meta', null, Math.round((m / ADJ.length) * 100) + '%') : null)));
+  document.getElementById('side-foot').replaceChildren(h('div', null, m + ' / ' + ADJ.length + ' words mastered'), meter((m / ADJ.length) * 100));
+}
 function go(page) {
-  if (!PAGES[page]) page = 'practice';
-  document.querySelectorAll('nav button').forEach((b) => b.toggleAttribute('aria-current', b.dataset.page === page));
+  if (!PAGES[page]) page = 'home';
   if (location.hash.slice(1) !== page) history.replaceState(null, '', '#' + page);
+  renderNav(page);
   $main.replaceChildren(PAGES[page]());
   window.scrollTo(0, 0);
 }
-document.querySelectorAll('nav button').forEach((b) => b.addEventListener('click', () => go(b.dataset.page)));
 window.addEventListener('hashchange', () => go(location.hash.slice(1)));
+const startSession = (topics, len, words) => { renderNav('practice'); $main.replaceChildren(Session(topics, len, words)); window.scrollTo(0, 0); };
+
+/* ---------- dashboard ---------- */
+function Home() {
+  const m = ADJ.filter((a) => mastered(a.id)).length, tr = trouble();
+  const all = Object.values(P.topics).reduce((a, t) => ({ n: a.n + t.n, r: a.r + t.r }), { n: 0, r: 0 });
+  const today = P.days[dayKey()] || 0, streak = dayStreak();
+  const tried = TOPICS.filter(([t]) => (P.topics[t] || {}).n);
+  const weakest = tried.length ? tried.reduce((a, b) => (pct(P.topics[a[0]].r, P.topics[a[0]].n) <= pct(P.topics[b[0]].r, P.topics[b[0]].n) ? a : b)) : null;
+  const untried = TOPICS.find(([t]) => !(P.topics[t] || {}).n);
+  const next = untried || weakest;
+  const tile = (label, num, sub) => h('div.panel.tile', null, h('div.ask', null, label), h('div.num', null, ...num), h('div.note', null, sub));
+  const allTopics = TOPICS.map(([t]) => t);
+  const hour = new Date().getHours();
+  return h('div', null,
+    h('h1', null, hour < 18 ? 'Bonjour !' : 'Bonsoir !'),
+    h('p.lede', null, all.n ? 'Here’s where you are. Pick up with the suggested drill, or clear your trouble words.' : 'Start with a quick round: ten questions across everything in Leçon 3A1.'),
+    h('div.tiles', null,
+      tile('Words mastered', [String(m), h('small', null, ' / ' + ADJ.length)], 'right ' + MASTER + ' times in a row'),
+      tile('Today', [String(today)], today === 1 ? 'answer' : 'answers'),
+      tile('Streak', [String(streak)], streak === 1 ? 'day' : 'days in a row'),
+      tile('Accuracy', [all.n ? pct(all.r, all.n) + '%' : '–'], all.n ? all.n + ' answers in all' : 'no answers yet')),
+    h('div.dash', null,
+      h('div.stack', null,
+        h('section.panel', null, h('h2', null, 'Keep going'),
+          h('div.actions', null,
+            h('button.btn.primary', { type: 'button', onclick: () => startSession(allTopics, 10) }, 'Quick round: 10 questions', h('span', { 'aria-hidden': 'true' }, '→')),
+            next ? h('button.btn', { type: 'button', onclick: () => startSession([next[0]], 10) }, (untried ? 'Try next: ' : 'Weakest drill: ') + next[1], h('span', { 'aria-hidden': 'true' }, '→')) : null,
+            tr.length ? h('button.btn', { type: 'button', onclick: () => startSession(allTopics, 10, tr.map((a) => a.id)) }, 'Practice trouble words (' + tr.length + ')', h('span', { 'aria-hidden': 'true' }, '→')) : null),
+          tr.length ? h('div.chips', { lang: 'fr' }, tr.map((a) => h('span', null, a.id))) : null),
+        h('section.panel', null, h('h2', null, 'Lessons'),
+          LESSONS.map((l) => {
+            const ws = ADJ.filter((a) => a.lesson === l.id), lm = ws.filter((a) => mastered(a.id)).length;
+            return h('div.lesson', null, h('div.code', null, l.id),
+              h('div.lesson-body', null, h('b', null, l.title + ' · ' + l.sub), h('div.note', null, lm + ' of ' + ws.length + ' words mastered'), h('div', { style: 'margin-top:6px' }, meter((lm / ws.length) * 100, 'good'))),
+              h('button.btn', { type: 'button', onclick: () => go('words') }, 'Words'));
+          }))),
+      h('section.panel', null, h('h2', null, 'Drills'),
+        h('p.note', { style: 'margin:0 0 6px' }, 'Your accuracy in each. Tap one to practise it.'),
+        TOPICS.map(([t, label]) => {
+          const x = P.topics[t], v = x ? pct(x.r, x.n) : null;
+          return h('div.drow', null,
+            h('button', { type: 'button', onclick: () => startSession([t], 10) }, label),
+            meter(v, v == null ? null : v >= 80 ? 'good' : v < 60 ? 'low' : null),
+            h('span.pct', null, v == null ? 'new' : v + '%'));
+        }))));
+}
 
 /* ---------- practice ---------- */
 function Practice() {
   let picked = store.get('topics', TOPICS.map(([t]) => t)).filter((t) => TOPICS.some(([x]) => x === t));
   let len = store.get('len', 10);
-  const start = h('button.btn.primary', { type: 'button', onclick: () => $main.replaceChildren(Session(picked, len)) }, 'Start');
+  const start = h('button.btn.primary', { type: 'button', onclick: () => startSession(picked, len) }, 'Start');
   const sync = () => { start.disabled = !picked.length; store.set('topics', picked); };
   const lens = [[10, '10'], [20, '20'], [0, 'Endless']];
   const seg = h('div.seg', { role: 'group', 'aria-label': 'How many questions' }, lens.map(([n, l]) =>
@@ -187,20 +299,20 @@ function Practice() {
   sync();
   return h('div', null,
     h('h1', null, 'Practice'),
-    h('p.lede', null, 'Leçon 3A1: les adjectifs descriptifs. Pick what to drill. Every answer shows the rule. Accents count as right if you leave them out, but you’ll be reminded.'),
+    h('p.lede', null, 'Pick what to drill. Every answer shows the rule. Accents count as right if you leave them out, but you’ll be reminded.'),
     h('div.stack', null,
       h('div.topics', null, TOPICS.map(([t, label]) => h('label', null,
         h('input', { type: 'checkbox', checked: picked.includes(t), onchange: (e) => { picked = e.target.checked ? [...picked, t] : picked.filter((x) => x !== t); sync(); } }), label))),
       h('div.row', null, seg, start)));
 }
 
-function Session(topics, len) {
+function Session(topics, len, words) {
   let n = 0, right = 0, q, done = false;
   const missed = [];
   const wrap = h('div.drill');
   function next() {
     if (len && n >= len) return finish();
-    q = question(topics); done = false;
+    q = question(topics, words); done = false;
     const fill = h('i', { style: 'width:' + (len ? (n / len) * 100 : 0) + '%' });
     const fb = h('div', { 'aria-live': 'polite' });
     const nextBtn = h('button.btn.primary', { type: 'button', hidden: true, onclick: () => { n++; done = false; next(); } }, len && n + 1 >= len ? 'See results' : 'Next');
@@ -212,6 +324,7 @@ function Session(topics, len) {
       if (!q.choices && !given.trim()) return;
       done = true;
       if (r.ok) right++; else missed.push({ q, given });
+      record(q, r.ok);
       fb.replaceChildren(h('div.fb.' + (r.ok ? 'ok' : 'no'), null,
         h('b', null, r.ok ? (r.accent ? 'Right, but watch the accent' : 'Right') : 'Not quite'),
         !r.ok || r.accent ? h('div.want' + (q.lang === 'en' ? '' : '.fr'), null, q.answers[0]) : null,
@@ -259,7 +372,7 @@ function Session(topics, len) {
       missed.length ? h('div', null, h('h2', null, 'To look at again'), h('ul.missed', null, missed.map(({ q, given }) => h('li', null,
         h('span' + (q.showLang === 'fr' ? '.fr' : ''), null, q.show), ' → ', h('b' + (q.lang === 'en' ? '' : '.fr'), null, q.answers[0]),
         given ? h('span.muted', null, ' (you: ' + given + ')') : null)))) : h('p', null, 'Nothing missed.'),
-      h('div.row', null, h('button.btn.primary', { type: 'button', onclick: () => $main.replaceChildren(Session(topics, len)) }, 'Again'), h('button.btn', { type: 'button', onclick: () => go('practice') }, 'Change topics'))));
+      h('div.row', null, h('button.btn.primary', { type: 'button', onclick: () => startSession(topics, len, words) }, 'Again'), h('button.btn', { type: 'button', onclick: () => go('home') }, 'Dashboard'))));
   }
   next();
   return wrap;
@@ -271,11 +384,11 @@ function Words() {
     h('thead', null, h('tr', null, ['Masc. sg.', 'Meaning', 'Fem. sg.', 'Masc. pl.', 'Fem. pl.'].map((t) => h('th', null, t)))),
     h('tbody', null, ADJ.filter((a) => a.group === g).map((a) => h('tr', null,
       h('td.fr.m', { lang: 'fr' }, a.f[0], a.alt ? h('span.tag.warm', { title: 'before a vowel or silent h' }, a.alt) : null),
-      h('td', null, a.en.join(', '), a.before ? h('span.tag', null, 'before') : null, a.note ? h('div.note', null, a.note) : null),
+      h('td', null, a.en.join(', '), a.before ? h('span.tag', null, 'before') : null, mastered(a.id) ? h('span.tag.good', null, 'mastered') : null, a.note ? h('div.note', null, a.note) : null),
       h('td.fr.f', { lang: 'fr' }, a.f[1]), h('td.fr.m', { lang: 'fr' }, a.f[2]), h('td.fr.f', { lang: 'fr' }, a.f[3])))))));
   return h('div', null,
     h('h1', null, 'Words'),
-    h('p.lede', null, 'Every adjective with its four forms. “Before” marks the 11 that go in front of the noun; the orange tag is the extra form used before a vowel or silent h.'),
+    h('p.lede', null, 'Leçon 3A1. Every adjective with its four forms. “Before” marks the 11 that go in front of the noun; the orange tag is the extra form used before a vowel or silent h.'),
     h('div.stack', null, Object.keys(GROUPS).map(group)));
 }
 

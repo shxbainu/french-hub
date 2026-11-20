@@ -2,6 +2,7 @@
 
 Practice for Leçon 3A1, les adjectifs descriptifs: meanings, the four forms, which 11 adjectives go before the noun, bel / nouvel / vieil, de vs des, and hair adjectives.
 
+- **Dashboard**: words mastered (right 3 times in a row), answers today, day streak, accuracy, accuracy per drill, trouble words, and a suggested next drill.
 - **Practice**: tick the drills you want, 10, 20 or endless questions, the rule after every answer. Accents are optional but flagged.
 - **Words**: every adjective with all four forms.
 - **Rules**: the class notes with examples.
@@ -19,7 +20,9 @@ node test.js   # checks the phrases against the class sheet and that every quest
 | Adjectives, nouns, question generators, answer checking | `french.js` |
 | The page (styles and UI) | `index.html` |
 
-To add vocabulary, add entries to `ADJ` (and nouns to `NOUNS`) in `french.js`.
+To add a lesson: add it to `LESSONS` in `french.js` and tag its words with `lesson: '<id>'`.
+
+Progress is saved in the browser (localStorage, `frhub:*`); nothing is sent anywhere.
 
 ## Deploy
 

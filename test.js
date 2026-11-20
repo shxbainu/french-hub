@@ -32,5 +32,11 @@ for (const [t] of TOPICS) for (let i = 0; i < 400; i++) {
   if (x.choices) assert.ok(x.choices.includes(x.answers[0]), t);
   else assert.ok(check(x, x.answers[0]).ok, t);
   assert.ok(x.show && x.why, t);
+  assert.ok(A[x.word], t + ' has a word');
 }
+
+// Trouble-word focus: questions stick to the focus words when the drill allows them.
+for (let i = 0; i < 100; i++) assert.equal(FR.question(['forms'], ['fier']).word, 'fier');
+assert.equal(FR.question(['bel'], ['fier']).word === 'fier', false); // fier has no bel-form: falls back
+assert.ok(FR.ADJ.every((a) => FR.LESSONS.some((l) => l.id === a.lesson)));
 console.log('ok');
