@@ -3,8 +3,9 @@
 Practice for Leçon 3A1, les adjectifs descriptifs: meanings, the four forms, which 11 adjectives go before the noun, bel / nouvel / vieil, de vs des, and hair adjectives.
 
 - **Dashboard**: words learned, reviews due, day streak, grammar accuracy, what to do next, trouble words.
-- **Vocab**: learn new words in groups of 5 (study cards with all four forms, then a quiz both ways), then spaced-repetition reviews (FSRS-4.5, the same scheduler as the Latin hub). All words lists each word's status.
-- **Grammar**: sentences and phrases (agreement, placement, bel / nouvel / vieil, de vs des, hair), with the matching rule shown beside each question.
+- **Vocab**: learn new words in groups of 5 (meet each word and copy it out, match them up, recall both ways), then spaced-repetition reviews (FSRS-4.5, the same scheduler as the Latin hub). All words lists each word's status.
+- **Grammar**: sentences and phrases (agreement, placement, bel / nouvel / vieil, de vs des, hair), with the matching rule shown beside each question and the full sentence + translation after each answer.
+- Every quiz works like the Latin hub's: cards slide in and out, a miss shakes and types the right answer in with your mistake highlighted, you type it again to move on, and missed words come back a few cards later.
 - **Rules**: the class notes with examples.
 
 ## Develop

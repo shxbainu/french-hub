@@ -112,19 +112,26 @@
   }
   const fitsPred = (a, n) => (a.on ? fits(a, n) : n.k === 'p');
 
+  const EN_SUBJ = { Il: ['He is', 'He has'], Elle: ['She is', 'She has'], Ils: ['They are', 'They have'], Elles: ['They are', 'They have'] };
+  const HINT = {
+    phrase: 'Before or after the noun? Masculine or feminine, singular or plural?',
+    hair: 'Who does it describe: the person, or les cheveux (always masculine plural)?',
+  };
+  const startsWith = (w) => 'Starts with “' + w.slice(0, w.length > 5 ? 2 : 1) + '…”';
+
   const Q = {
     'fr-en'() {
       const a = pick(pool());
-      return { topic: 'fr-en', word: a.id, ask: 'What does it mean?', show: a.f[0], showLang: 'fr', sub: a.f.join(' · '), lang: 'en', answers: a.en, why: a.id + ': ' + a.en.join(', ') + '.' };
+      return { topic: 'fr-en', word: a.id, ask: 'What does it mean?', show: a.f[0], showLang: 'fr', sub: a.f.join(' · '), lang: 'en', answers: a.en, why: a.id + ': ' + a.en.join(', ') + '.', hint: startsWith(a.en[0]) };
     },
     'en-fr'() {
       const a = pick(pool());
-      return { topic: 'en-fr', word: a.id, ask: 'In French (masculine singular)', show: a.en[0], showLang: 'en', lang: 'fr', answers: [a.f[0]], why: a.en[0] + ' = ' + a.f.join(', ') + '.' + (a.note ? ' ' + a.note : '') };
+      return { topic: 'en-fr', word: a.id, ask: 'In French (masculine singular)', show: a.en[0], showLang: 'en', lang: 'fr', answers: [a.f[0]], why: a.en[0] + ' = ' + a.f.join(', ') + '.' + (a.note ? ' ' + a.note : ''), hint: startsWith(a.f[0]) };
     },
     forms() {
       const a = pick(pool());
       const i = 1 + Math.floor(Math.random() * 3);
-      return { topic: 'forms', word: a.id, ask: 'Give the ' + SLOT[i], show: a.f[0], showLang: 'fr', sub: a.en[0], lang: 'fr', answers: [a.f[i]], why: whyForm(a, i) };
+      return { topic: 'forms', word: a.id, ask: 'Give the ' + SLOT[i], show: a.f[0], showLang: 'fr', sub: a.en[0], lang: 'fr', answers: [a.f[i]], why: whyForm(a, i), hint: startsWith(a.f[i]) };
     },
     sent() {
       if (Math.random() < 0.5) {
@@ -132,7 +139,7 @@
         const n = pick(NOUNS.filter((x) => fitsPred(a, x)));
         const pl = Math.random() < 0.45, p = predicate(a, n, pl);
         return { topic: 'sent', word: a.id, ask: 'Write it in French', show: p.en, showLang: 'en', lang: 'fr', answers: [p.fr],
-          why: 'The adjective agrees with ' + theNoun(n, pl) + ' (' + (n.g === 'f' ? 'feminine' : 'masculine') + (pl ? ' plural' : ' singular') + '): ' + p.form + '.' + (a.note ? ' ' + a.note : '') };
+          hint: HINT.phrase, why: 'The adjective agrees with ' + theNoun(n, pl) + ' (' + (n.g === 'f' ? 'feminine' : 'masculine') + (pl ? ' plural' : ' singular') + '): ' + p.form + '.' + (a.note ? ' ' + a.note : '') };
       }
       const a = pick(pool((x) => x.on));
       const n = pick(NOUNS.filter((x) => fits(a, x)));
@@ -140,7 +147,7 @@
       const bits = [whyPlace(a)];
       if (p.form === a.alt) bits.push(a.alt + ' before a vowel or silent h.');
       if (pl && a.before) bits.push('Plural adjective before the noun: de, not des.');
-      return { topic: 'sent', word: a.id, ask: 'Write it in French', show: 'I have ' + p.en + '.', showLang: 'en', lang: 'fr', answers: ["J'ai " + p.fr + '.'], why: bits.join(' ') };
+      return { topic: 'sent', word: a.id, ask: 'Write it in French', show: 'I have ' + p.en + '.', showLang: 'en', lang: 'fr', answers: ["J'ai " + p.fr + '.'], why: bits.join(' '), hint: HINT.phrase };
     },
     place() {
       const a = pick(pool((x) => x.on));
@@ -148,7 +155,8 @@
       const p = phrase(a, n, false);
       return {
         topic: 'place', word: a.id, ask: 'Where does it go?', show: (n.g === 'f' ? 'une ' : 'un ') + n.sg + ' + ' + a.f[0], showLang: 'fr', sub: p.en,
-        choices: ['before the noun', 'after the noun'], answers: [a.before ? 'before the noun' : 'after the noun'], why: whyPlace(a) + ' → ' + p.fr,
+        choices: ['before the noun', 'after the noun'], answers: [a.before ? 'before the noun' : 'after the noun'], why: whyPlace(a), full: p.fr, en: p.en,
+        hint: 'Only 11 go before: ' + BEFORE.join(', ') + '.',
       };
     },
     phrase() {
@@ -160,7 +168,7 @@
       if (p.form !== a.f[0] || pl) bits.push(n.sg + ' is ' + (n.g === 'f' ? 'feminine' : 'masculine') + (pl ? ' plural' : '') + ', so ' + p.form + '.');
       if (p.form === a.alt) bits.push(a.alt + ' before a vowel or silent h.');
       if (pl && a.before) bits.push('Plural adjective before the noun: de, not des.');
-      return { topic: 'phrase', word: a.id, ask: 'Write it in French', show: p.en, showLang: 'en', lang: 'fr', answers: [p.fr], why: bits.join(' ') };
+      return { topic: 'phrase', word: a.id, ask: 'Write it in French', show: p.en, showLang: 'en', lang: 'fr', answers: [p.fr], why: bits.join(' '), hint: HINT.phrase };
     },
     bel() {
       const a = pick(pool((x) => x.alt));
@@ -171,7 +179,7 @@
       const why = p.form === a.alt ? n.sg + ' starts with a vowel or silent h, so ' + a.alt + ', not ' + a.f[0] + '.'
         : n.g === 'f' ? n.sg + ' is feminine: ' + p.form + '.' : pl ? 'Plural: ' + p.form + '. (' + a.alt + ' is only masculine singular.)'
         : n.sg + ' starts with a consonant, so ' + a.f[0] + '.';
-      return { topic: 'bel', word: a.id, ask: 'Fill in ' + a.id, show: blank, showLang: 'fr', sub: p.en, lang: 'fr', answers: [p.form], why };
+      return { topic: 'bel', word: a.id, ask: 'Fill in ' + a.id, show: blank, showLang: 'fr', lang: 'fr', answers: [p.form], why, full: p.fr, en: p.en, hint: 'Is the noun masculine singular, and does it start with a vowel or silent h?' };
     },
     de() {
       const a = pick(pool((x) => x.on));
@@ -179,7 +187,7 @@
       const p = phrase(a, n, true);
       const rest = p.fr.slice(p.art.length + 1);
       return {
-        topic: 'de', word: a.id, ask: 'de or des?', show: '___ ' + rest, showLang: 'fr', sub: p.en, choices: ['de', 'des'], answers: [p.art],
+        topic: 'de', word: a.id, ask: 'de or des?', show: '___ ' + rest, showLang: 'fr', choices: ['de', 'des'], answers: [p.art], full: cap(p.fr), en: cap(p.en), hint: 'Does the adjective come before the noun?',
         why: a.before ? 'The plural adjective comes before the noun, so de, not des.' : 'The adjective comes after the noun, so des stays.',
       };
     },
@@ -188,11 +196,13 @@
       if (Math.random() < 0.5) {
         const a = pick(pool((x) => ['brun', 'châtain', 'blond', 'roux'].includes(x.id)));
         const i = slotOf(subj[1], subj[2]);
-        return { topic: 'hair', word: a.id, ask: 'Fill in ' + a.id, show: subj[0] + (subj[2] ? ' sont' : ' est') + ' ___.', showLang: 'fr', sub: a.en[0], lang: 'fr', answers: [a.f[i]], why: 'It describes ' + subj[0].toLowerCase() + ', so ' + SLOT[i] + ': ' + a.f[i] + '.' };
+        return { topic: 'hair', word: a.id, ask: 'Fill in ' + a.id, show: subj[0] + (subj[2] ? ' sont' : ' est') + ' ___.', showLang: 'fr', lang: 'fr', answers: [a.f[i]], why: 'It describes ' + subj[0].toLowerCase() + ', so ' + SLOT[i] + ': ' + a.f[i] + '.',
+          full: subj[0] + (subj[2] ? ' sont ' : ' est ') + a.f[i] + '.', en: EN_SUBJ[subj[0]][0] + ' ' + a.en[0] + '.', hint: HINT.hair };
       }
       const a = pick(pool((x) => ['brun', 'châtain', 'blond', 'roux', 'raide', 'court', 'long', 'noir'].includes(x.id)));
       const verb = { Il: 'a', Elle: 'a', Ils: 'ont', Elles: 'ont' }[subj[0]];
-      return { topic: 'hair', word: a.id, ask: 'Fill in ' + a.id, show: subj[0] + ' ' + verb + ' les cheveux ___.', showLang: 'fr', sub: a.en[0] + ' hair', lang: 'fr', answers: [a.f[2]], why: 'Les cheveux is always masculine plural, whoever has the hair: ' + a.f[2] + '.' };
+      return { topic: 'hair', word: a.id, ask: 'Fill in ' + a.id, show: subj[0] + ' ' + verb + ' les cheveux ___.', showLang: 'fr', lang: 'fr', answers: [a.f[2]], why: 'Les cheveux is always masculine plural, whoever has the hair: ' + a.f[2] + '.',
+        full: subj[0] + ' ' + verb + ' les cheveux ' + a.f[2] + '.', en: EN_SUBJ[subj[0]][1] + ' ' + a.en[0].replace('-haired', '') + ' hair.', hint: HINT.hair };
     },
   };
   function question(topics, words) { focus = words || []; return Q[pick(topics)](); }

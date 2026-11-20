@@ -33,6 +33,8 @@ for (const [t] of TOPICS) for (let i = 0; i < 400; i++) {
   else assert.ok(check(x, x.answers[0]).ok, t);
   assert.ok(x.show && x.why, t);
   assert.ok(A[x.word], t + ' has a word');
+  assert.ok(x.hint, t + ' has a hint');
+  if (x.full) assert.ok(x.en && !x.full.includes('___'), t + ' full sentence + translation');
 }
 
 // Trouble-word focus: questions stick to the focus words when the drill allows them.
