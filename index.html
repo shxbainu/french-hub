@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>French Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+/* Paper and ink, with a tricolore accent: rouge for actions, bleu for masculine, framboise for feminine. */
+:root {
+  --bg: 250 246 239; --surface: 255 253 249; --sunken: 243 237 227; --ink: 28 33 58; --muted: 100 100 116; --line: 229 220 205;
+  --accent: 186 40 56; --accent-soft: 250 229 229; --accent-ink: 255 255 255; --navy: 28 45 102;
+  --good: 34 118 80; --good-soft: 226 241 232; --bad: 186 40 56; --bad-soft: 250 229 229;
+  --warm: 158 112 30; --warm-soft: 247 237 214; --gf: 178 56 118; --gm: 36 76 156;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: 20 22 34; --surface: 29 31 46; --sunken: 38 40 58; --ink: 241 235 222; --muted: 168 164 160; --line: 56 56 74;
+    --accent: 242 118 126; --accent-soft: 70 36 46; --accent-ink: 20 22 34; --navy: 150 176 240;
+    --good: 108 200 150; --good-soft: 30 52 42; --bad: 242 118 126; --bad-soft: 70 36 46;
+    --warm: 226 182 100; --warm-soft: 60 48 26; --gf: 236 132 186; --gm: 132 168 240;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: 20 22 34; --surface: 29 31 46; --sunken: 38 40 58; --ink: 241 235 222; --muted: 168 164 160; --line: 56 56 74;
+  --accent: 242 118 126; --accent-soft: 70 36 46; --accent-ink: 20 22 34; --navy: 150 176 240;
+  --good: 108 200 150; --good-soft: 30 52 42; --bad: 242 118 126; --bad-soft: 70 36 46;
+  --warm: 226 182 100; --warm-soft: 60 48 26; --gf: 236 132 186; --gm: 132 168 240;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; min-height: 100%; }
+body { background: rgb(var(--bg)); color: rgb(var(--ink)); font: 15px/1.55 Manrope, system-ui, -apple-system, 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; }
+input, button { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid rgb(var(--accent)); outline-offset: 2px; border-radius: 6px; }
+.fr { font-family: 'Cormorant Garamond', Garamond, Georgia, serif; font-weight: 600; }
+.muted { color: rgb(var(--muted)); }
+.f { color: rgb(var(--gf)); } .m { color: rgb(var(--gm)); }
+
+/* Top bar instead of a sidebar; one centered reading column. */
+.shell { min-height: 100vh; }
+aside { position: sticky; top: 0; z-index: 2; background: rgb(var(--bg) / 0.92); backdrop-filter: blur(8px); border-bottom: 1px solid rgb(var(--line)); }
+.topbar { max-width: 960px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; gap: 24px; height: 64px; }
+.brand { display: flex; align-items: center; gap: 12px; font: 700 24px/1 'Cormorant Garamond', Georgia, serif; color: rgb(var(--navy)); white-space: nowrap; }
+.flag { display: flex; width: 26px; height: 18px; border-radius: 3px; overflow: hidden; box-shadow: 0 0 0 1px rgb(var(--line)); }
+.flag i { flex: 1; } .flag i:nth-child(1) { background: #1f3f94; } .flag i:nth-child(2) { background: #fff; } .flag i:nth-child(3) { background: #d42f3f; }
+nav { display: flex; gap: 4px; margin-left: auto; height: 100%; }
+nav button { border: 0; background: none; padding: 0 14px; font-weight: 700; font-size: 14px; letter-spacing: 0.02em; color: rgb(var(--muted)); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+nav button:hover { color: rgb(var(--ink)); }
+nav button[aria-current] { color: rgb(var(--accent)); border-bottom-color: rgb(var(--accent)); }
+main { max-width: 960px; margin: 0 auto; padding: 40px 24px 72px; }
+h1 { font: 700 44px/1.05 'Cormorant Garamond', Georgia, serif; margin: 0 0 8px; color: rgb(var(--navy)); }
+h2 { font: 700 23px/1.2 'Cormorant Garamond', Georgia, serif; margin: 0 0 10px; color: rgb(var(--navy)); }
+.lede { margin: 0 0 24px; color: rgb(var(--muted)); max-width: 62ch; }
+.panel { background: rgb(var(--surface)); border: 1px solid rgb(var(--line)); border-radius: 6px; padding: 24px; box-shadow: 0 1px 0 rgb(var(--line)); }
+.stack > * + * { margin-top: 16px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 999px; font-weight: 700; padding: 10px 20px; border: 1px solid rgb(var(--line)); background: rgb(var(--surface)); }
+.btn:hover { border-color: rgb(var(--accent) / 0.5); }
+.btn.primary { background: rgb(var(--accent)); border-color: rgb(var(--accent)); color: rgb(var(--accent-ink)); }
+.btn.primary:hover { background: rgb(var(--accent) / 0.9); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+/* topic picker */
+.topics { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+.topics label { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid rgb(var(--line)); border-radius: 6px; background: rgb(var(--surface)); cursor: pointer; font-weight: 600; }
+.topics label:has(input:checked) { border-color: rgb(var(--navy) / 0.55); }
+.topics input { accent-color: rgb(var(--accent)); width: 17px; height: 17px; }
+.seg { display: inline-flex; border: 1px solid rgb(var(--line)); border-radius: 999px; overflow: hidden; }
+.seg button { border: 0; background: rgb(var(--surface)); padding: 8px 14px; font-weight: 600; color: rgb(var(--muted)); }
+.seg button[aria-pressed="true"] { background: rgb(var(--accent-soft)); color: rgb(var(--accent)); }
+
+/* question card */
+.drill { max-width: 680px; margin: 0 auto; }
+.bar { height: 6px; border-radius: 3px; background: rgb(var(--sunken)); overflow: hidden; margin-bottom: 18px; }
+.bar i { display: block; height: 100%; background: rgb(var(--accent)); transition: width .3s; }
+.ask { text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; font-weight: 700; color: rgb(var(--muted)); }
+.show { font-size: 42px; line-height: 1.2; margin: 8px 0 4px; overflow-wrap: anywhere; }
+.show.en { font: 700 24px/1.3 Manrope, system-ui, sans-serif; }
+.sub { color: rgb(var(--muted)); margin: 0 0 18px; }
+.answer { width: 100%; padding: 12px 14px; border: 1.5px solid rgb(var(--line)); border-radius: 12px; background: rgb(var(--bg)); font-size: 20px; }
+.answer.fr { font-size: 24px; }
+.answer:focus { outline: none; border-color: rgb(var(--navy)); }
+.answer.ok { border-color: rgb(var(--good)); } .answer.no { border-color: rgb(var(--bad)); }
+.keys { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 0; }
+.keys button { min-width: 38px; padding: 6px 8px; border-radius: 9px; border: 1px solid rgb(var(--line)); background: rgb(var(--surface)); font: 600 19px 'Cormorant Garamond', Georgia, serif; }
+.choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.choices button { padding: 14px; border-radius: 12px; border: 1.5px solid rgb(var(--line)); background: rgb(var(--surface)); font-weight: 600; font-size: 16px; }
+.choices button:hover:not(:disabled) { border-color: rgb(var(--accent)); }
+.choices button.ok { border-color: rgb(var(--good)); background: rgb(var(--good-soft)); }
+.choices button.no { border-color: rgb(var(--bad)); background: rgb(var(--bad-soft)); }
+.fb { border-radius: 12px; padding: 12px 14px; margin-top: 14px; }
+.fb.ok { background: rgb(var(--good-soft)); } .fb.no { background: rgb(var(--bad-soft)); }
+.fb b { display: block; margin-bottom: 2px; }
+.fb .want { font-size: 20px; }
+.score { font-size: 44px; font-weight: 700; }
+.missed li { margin: 8px 0; }
+
+/* words + rules */
+table { border-collapse: collapse; width: 100%; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid rgb(var(--line)); vertical-align: top; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: rgb(var(--muted)); font-weight: 700; }
+td.fr { font-size: 18px; }
+.scroll { overflow-x: auto; }
+.tag { display: inline-block; border: 1px solid rgb(var(--accent) / 0.4); color: rgb(var(--accent)); border-radius: 4px; padding: 2px 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-left: 6px; vertical-align: 2px; }
+.tag.warm { border-color: rgb(var(--warm) / 0.5); color: rgb(var(--warm)); }
+.note { color: rgb(var(--muted)); font-size: 14px; }
+.ex { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px 20px; margin-top: 10px; }
+.ex .fr { font-size: 19px; }
+.big { font: 600 26px/1.4 'Cormorant Garamond', Georgia, serif; letter-spacing: 0.02em; }
+.big b { color: rgb(var(--accent)); }
+.rules { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+
+@media (max-width: 760px) {
+  .topbar { padding: 0 16px; gap: 12px; height: 56px; }
+  .brand { font-size: 21px; }
+  nav button { padding: 0 9px; }
+  main { padding: 24px 16px 48px; }
+  h1 { font-size: 36px; }
+  .show { font-size: 34px; }
+  .rules { grid-template-columns: 1fr; }
+  .ex { grid-template-columns: 1fr; }
+  .ex .en-ex { margin-top: 6px; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside>
+    <div class="topbar"><div class="brand"><span class="flag" aria-hidden="true"><i></i><i></i><i></i></span>French Hub</div>
+    <nav aria-label="Sections">
+      <button type="button" data-page="practice">Practice</button>
+      <button type="button" data-page="words">Words</button>
+      <button type="button" data-page="rules">Rules</button>
+    </nav></div>
+  </aside>
+  <main id="main"></main>
+</div>
+<script src="french.js"></script>
+<script>
+const { ADJ, GROUPS, BEFORE, TOPICS, question, check } = window.FR;
+const $main = document.getElementById('main');
+
+// h('div.class', {attrs}, ...children): a tiny DOM builder. Strings become text nodes, so nothing is parsed as HTML.
+function h(tag, attrs, ...kids) {
+  const [name, ...cls] = tag.split('.');
+  const el = document.createElement(name);
+  if (cls.length) el.className = cls.join(' ');
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (v !== false && v != null) el.setAttribute(k, v === true ? '' : v);
+  }
+  for (const k of kids.flat(Infinity)) if (k != null && k !== false) el.append(k);
+  return el;
+}
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('frhub:' + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('frhub:' + k, JSON.stringify(v)); } catch (e) { /* private mode: fine */ } },
+};
+
+/* ---------- pages ---------- */
+const PAGES = { practice: Practice, words: Words, rules: Rules };
+function go(page) {
+  if (!PAGES[page]) page = 'practice';
+  document.querySelectorAll('nav button').forEach((b) => b.toggleAttribute('aria-current', b.dataset.page === page));
+  if (location.hash.slice(1) !== page) history.replaceState(null, '', '#' + page);
+  $main.replaceChildren(PAGES[page]());
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll('nav button').forEach((b) => b.addEventListener('click', () => go(b.dataset.page)));
+window.addEventListener('hashchange', () => go(location.hash.slice(1)));
+
+/* ---------- practice ---------- */
+function Practice() {
+  let picked = store.get('topics', TOPICS.map(([t]) => t)).filter((t) => TOPICS.some(([x]) => x === t));
+  let len = store.get('len', 10);
+  const start = h('button.btn.primary', { type: 'button', onclick: () => $main.replaceChildren(Session(picked, len)) }, 'Start');
+  const sync = () => { start.disabled = !picked.length; store.set('topics', picked); };
+  const lens = [[10, '10'], [20, '20'], [0, 'Endless']];
+  const seg = h('div.seg', { role: 'group', 'aria-label': 'How many questions' }, lens.map(([n, l]) =>
+    h('button', { type: 'button', 'aria-pressed': String(n === len), onclick: (e) => { len = n; store.set('len', n); seg.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b === e.currentTarget))); } }, l)));
+  sync();
+  return h('div', null,
+    h('h1', null, 'Practice'),
+    h('p.lede', null, 'Leçon 3A1: les adjectifs descriptifs. Pick what to drill. Every answer shows the rule. Accents count as right if you leave them out, but you’ll be reminded.'),
+    h('div.stack', null,
+      h('div.topics', null, TOPICS.map(([t, label]) => h('label', null,
+        h('input', { type: 'checkbox', checked: picked.includes(t), onchange: (e) => { picked = e.target.checked ? [...picked, t] : picked.filter((x) => x !== t); sync(); } }), label))),
+      h('div.row', null, seg, start)));
+}
+
+function Session(topics, len) {
+  let n = 0, right = 0, q, done = false;
+  const missed = [];
+  const wrap = h('div.drill');
+  function next() {
+    if (len && n >= len) return finish();
+    q = question(topics); done = false;
+    const fill = h('i', { style: 'width:' + (len ? (n / len) * 100 : 0) + '%' });
+    const fb = h('div', { 'aria-live': 'polite' });
+    const nextBtn = h('button.btn.primary', { type: 'button', hidden: true, onclick: () => { n++; done = false; next(); } }, len && n + 1 >= len ? 'See results' : 'Next');
+    const counter = h('span.muted', null, len ? (n + 1) + ' / ' + len : (n ? right + ' / ' + n + ' right' : 'Endless'));
+
+    function grade(given) {
+      if (done) return;
+      const r = q.choices ? { ok: given === q.answers[0], accent: false } : check(q, given);
+      if (!q.choices && !given.trim()) return;
+      done = true;
+      if (r.ok) right++; else missed.push({ q, given });
+      fb.replaceChildren(h('div.fb.' + (r.ok ? 'ok' : 'no'), null,
+        h('b', null, r.ok ? (r.accent ? 'Right, but watch the accent' : 'Right') : 'Not quite'),
+        !r.ok || r.accent ? h('div.want' + (q.lang === 'en' ? '' : '.fr'), null, q.answers[0]) : null,
+        h('div', null, q.why)));
+      nextBtn.hidden = false;
+      nextBtn.focus();
+      return r;
+    }
+
+    let body;
+    if (q.choices) {
+      body = h('div.choices', null, q.choices.map((c) => h('button', { type: 'button', onclick: (e) => {
+        if (done) return;
+        grade(c);
+        body.querySelectorAll('button').forEach((b) => { b.disabled = true; if (b.textContent === q.answers[0]) b.classList.add('ok'); else if (b === e.currentTarget) b.classList.add('no'); });
+      } }, c)));
+    } else {
+      const input = h('input.answer' + (q.lang === 'fr' ? '.fr' : ''), { type: 'text', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', lang: q.lang, 'aria-label': q.ask });
+      const checkBtn = h('button.btn.primary', { type: 'button', onclick: () => submit() }, 'Check');
+      const submit = () => { const r = grade(input.value); if (r) { input.classList.add(r.ok ? 'ok' : 'no'); input.readOnly = true; checkBtn.hidden = true; } };
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); done ? nextBtn.click() : submit(); } });
+      const keys = q.lang === 'fr' ? h('div.keys', { 'aria-label': 'Accented letters' }, ['é', 'è', 'ê', 'à', 'â', 'ç', 'ï', 'î', 'ô', 'û'].map((c) => h('button', { type: 'button', tabindex: '-1', onclick: () => {
+        if (done) return;
+        const s = input.selectionStart ?? input.value.length, e2 = input.selectionEnd ?? s;
+        input.value = input.value.slice(0, s) + c + input.value.slice(e2); input.focus(); input.setSelectionRange(s + 1, s + 1);
+      } }, c))) : null;
+      body = h('div', null, input, keys, h('div.row', { style: 'margin-top:14px' }, checkBtn));
+      setTimeout(() => input.focus(), 0);
+    }
+    wrap.replaceChildren(
+      h('div.row', { style: 'justify-content:space-between;margin-bottom:10px' }, counter, h('button.btn', { type: 'button', onclick: finish }, len ? 'Stop' : 'Finish')),
+      len ? h('div.bar', null, fill) : null,
+      h('div.panel', null,
+        h('div.ask', null, q.ask),
+        h('div.show' + (q.showLang === 'fr' ? '.fr' : '.en'), { lang: q.showLang }, q.show),
+        q.sub ? h('p.sub', null, q.sub) : h('div', { style: 'height:14px' }),
+        body, fb,
+        h('div.row', { style: 'margin-top:14px' }, nextBtn)));
+  }
+  function finish() {
+    const total = done ? n + 1 : n;
+    wrap.replaceChildren(h('div.panel.stack', null,
+      h('div.ask', null, 'Done'),
+      h('div', null, h('span.score', null, right + ' / ' + total), h('span.muted', null, ' right')),
+      missed.length ? h('div', null, h('h2', null, 'To look at again'), h('ul.missed', null, missed.map(({ q, given }) => h('li', null,
+        h('span' + (q.showLang === 'fr' ? '.fr' : ''), null, q.show), ' → ', h('b' + (q.lang === 'en' ? '' : '.fr'), null, q.answers[0]),
+        given ? h('span.muted', null, ' (you: ' + given + ')') : null)))) : h('p', null, 'Nothing missed.'),
+      h('div.row', null, h('button.btn.primary', { type: 'button', onclick: () => $main.replaceChildren(Session(topics, len)) }, 'Again'), h('button.btn', { type: 'button', onclick: () => go('practice') }, 'Change topics'))));
+  }
+  next();
+  return wrap;
+}
+
+/* ---------- words ---------- */
+function Words() {
+  const group = (g) => h('section.panel', null, h('h2', null, GROUPS[g]), h('div.scroll', null, h('table', null,
+    h('thead', null, h('tr', null, ['Masc. sg.', 'Meaning', 'Fem. sg.', 'Masc. pl.', 'Fem. pl.'].map((t) => h('th', null, t)))),
+    h('tbody', null, ADJ.filter((a) => a.group === g).map((a) => h('tr', null,
+      h('td.fr.m', { lang: 'fr' }, a.f[0], a.alt ? h('span.tag.warm', { title: 'before a vowel or silent h' }, a.alt) : null),
+      h('td', null, a.en.join(', '), a.before ? h('span.tag', null, 'before') : null, a.note ? h('div.note', null, a.note) : null),
+      h('td.fr.f', { lang: 'fr' }, a.f[1]), h('td.fr.m', { lang: 'fr' }, a.f[2]), h('td.fr.f', { lang: 'fr' }, a.f[3])))))));
+  return h('div', null,
+    h('h1', null, 'Words'),
+    h('p.lede', null, 'Every adjective with its four forms. “Before” marks the 11 that go in front of the noun; the orange tag is the extra form used before a vowel or silent h.'),
+    h('div.stack', null, Object.keys(GROUPS).map(group)));
+}
+
+/* ---------- rules ---------- */
+function Rules() {
+  const ex = (pairs) => h('div.ex', null, pairs.flatMap(([en, fr]) => [h('div.en-ex.muted', null, en), h('div.fr', { lang: 'fr' }, fr)]));
+  const card = (title, ...kids) => h('section.panel', null, h('h2', null, title), ...kids);
+  return h('div', null,
+    h('h1', null, 'Rules'),
+    h('p.lede', null, 'From the Leçon 3A1 notes.'),
+    h('div.rules', null,
+      card('Agreement',
+        h('p', null, 'Adjectives match the noun: add ', h('b', null, '-e'), ' for feminine, ', h('b', null, '-s'), ' for plural.'),
+        ex([['a green bird', 'un oiseau vert'], ['a green house', 'une maison verte'], ['green birds', 'des oiseaux verts'], ['green houses', 'des maisons vertes']]),
+        h('p.note', null, 'Already ends in -e (jeune, raide): no extra -e. Marron never changes.')),
+      card('11 adjectives go before the noun',
+        h('p.big', { lang: 'fr' }, BEFORE.map((w, i) => [i ? ' · ' : '', h('b', null, w[0].toUpperCase()), w.slice(1)])),
+        h('p.note', null, 'Everything else goes after the noun.'),
+        ex([['a small intellectual man', 'un petit homme intellectuel'], ['a new French story', 'une nouvelle histoire française'], ['a young beautiful dog', 'un jeune et beau chien'], ['an ugly green bird', 'un oiseau laid et vert']])),
+      card('Irregular patterns',
+        h('div.scroll', null, h('table', null, h('tbody', null, [
+          ['-eux → -euse', 'heureux, heureuse'], ['-el → -elle', 'intellectuel, intellectuelle'], ['-f → -ve', 'naïf, naïve'],
+          ['-er → -ère', 'fier, fière'], ['-on → -onne', 'bon, bonne'], ['-g → -gue', 'long, longue'], ['-s doubles', 'gros, grosse'],
+          ['-eau → -elle', 'beau, belle · nouveau, nouvelle'], ['others', 'vieux, vieille · roux, rousse'],
+        ].map(([p, e]) => h('tr', null, h('td', null, p), h('td.fr', { lang: 'fr' }, e)))))),
+        h('p.note', null, 'Many English adjectives in -ous are -eux in French: curious → curieux, nervous → nerveux. -x words don’t add -s in the plural: heureux, gros, vieux.')),
+      card('bel, nouvel, vieil',
+        h('p', null, 'Three adjectives have a second masculine singular form, used before a vowel or silent h.'),
+        ex([['a new book', 'un nouveau livre'], ['a new friend', 'un nouvel ami'], ['a beautiful high school', 'un beau lycée'], ['a handsome man', 'un bel homme (h muet)'], ['an old backpack', 'un vieux sac à dos'], ['an old bird', 'un vieil oiseau']]),
+        h('p.note', null, 'Only masculine singular. In the plural it’s back to nouveaux, beaux, vieux.')),
+      card('de, not des',
+        h('p', null, 'When a plural adjective comes before the noun, use ', h('b', null, 'de'), ' instead of ', h('b', null, 'des'), '.'),
+        ex([['new friends', 'de nouveaux amis'], ['nice friends', 'des amis sympathiques'], ['beautiful high schools', 'de beaux lycées']])),
+      card('Hair',
+        h('p', null, 'Four special adjectives describe hair: ', h('span.fr', { lang: 'fr' }, 'brun, châtain, blond, roux'), '. Used for the person, they agree with the person:'),
+        ex([['He is black-haired.', 'Il est brun.'], ['She is brown-haired.', 'Elle est châtain.'], ['They are blond.', 'Ils sont blonds.'], ['They (f.) are red-haired.', 'Elles sont rousses.']]),
+        h('p', null, h('span.fr', { lang: 'fr' }, 'Les cheveux'), ' is always masculine plural, even for a girl:'),
+        ex([['He has black hair.', 'Il a les cheveux bruns.'], ['She has brown hair.', 'Elle a les cheveux châtains.'], ['She has red hair.', 'Elle a les cheveux roux.']]))));
+}
+
+go(location.hash.slice(1));
+</script>
+</body>
+</html>
