@@ -317,7 +317,52 @@ function countUp(el, to, suffix = '') {
 // topics: drill id → { n, r }. days: 'YYYY-MM-DD' → answers that day.
 const P = Object.assign({ words: {}, topics: {}, days: {}, cards: {} }, store.get('progress', {}));
 P.cards ||= {};
-const save = () => store.set('progress', P);
+const save = () => { P.t = Date.now(); store.set('progress', P); cloudPush(); };
+
+/* ---------- account sync: inside Claude's page, progress follows your Claude account (like the Latin hub) ---------- */
+let cloud = null, syncState = 'local', pushT = 0;
+const copyP = () => JSON.parse(JSON.stringify(P));
+function cloudPush(now) {
+  if (!cloud) return;
+  syncState = 'saving';
+  clearTimeout(pushT);
+  const send = () => { pushT = 0; cloud.set(copyP()).then(() => { syncState = 'saved'; renderNav(); }, () => { syncState = 'error'; renderNav(); }); };
+  if (now) send(); else pushT = setTimeout(send, 600);
+}
+function replaceP(d) { for (const k of Object.keys(P)) delete P[k]; Object.assign(P, { words: {}, topics: {}, days: {}, cards: {} }, JSON.parse(JSON.stringify(d))); store.set('progress', P); }
+async function connect() {
+  try {
+    if (!window.claude || !window.claude.use) return;
+    const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+    const uid = db && user ? await user.id() : null;
+    if (!uid) return;
+    const ref = db.doc('data/users/' + uid + '/french-progress');
+    const snap = await ref.get();
+    cloud = ref;
+    const remote = snap.exists ? snap.data() : null;
+    if (remote && (remote.t || 0) >= (P.t || 0)) { replaceP(remote); syncState = 'saved'; if (onPage) go(current); }
+    else if (P.t) cloudPush(true); // this browser is newer
+    else syncState = 'saved';
+    renderNav();
+  } catch (e) { syncState = 'local'; renderNav(); }
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && pushT) cloudPush(true); });
+// Outside Claude (the GitHub Pages copy) progress lives in this browser; a backup code moves it to another one.
+function backupButtons() {
+  const copy = h('button.btn.ghost.sm', { type: 'button', onclick: async () => {
+    try { await navigator.clipboard.writeText(JSON.stringify({ app: 'french-hub', P })); copy.textContent = 'Copied ✓'; } catch (e) { prompt('Copy this backup code:', JSON.stringify({ app: 'french-hub', P })); }
+  } }, 'Copy backup');
+  const paste = h('button.btn.ghost.sm', { type: 'button', onclick: () => {
+    const s = prompt('Paste a backup code from your other device:');
+    if (!s) return;
+    let d; try { d = JSON.parse(s); } catch (e) { d = null; }
+    if (!d || d.app !== 'french-hub' || !d.P || typeof d.P !== 'object') return alert('That isn’t a French Hub backup code.');
+    if ((d.P.t || 0) < (P.t || 0) && !confirm('This backup is older than the progress here. Replace it anyway?')) return;
+    replaceP(d.P); save(); go(current);
+  } }, 'Paste backup');
+  return h('div.row', { style: 'margin-top:0.6rem;gap:0.4rem' }, copy, paste);
+}
+const SYNC = { saved: '✓ Saved to your Claude account', saving: 'Saving…', error: 'Couldn’t reach your account. Saved here.', local: 'Saved in this browser' };
 const dayKey = (d = new Date()) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 function record(q, ok) {
   const w = P.words[q.word] ||= { n: 0, r: 0, s: 0 };
@@ -363,18 +408,19 @@ function grammarAcc() {
 const PAGES = { home: Home, vocab: Vocab, grammar: Grammar, rules: Rules };
 const OLD = { practice: 'grammar', words: 'vocab' };
 const NAV = [['home', 'Dashboard'], ['vocab', 'Vocab'], ['grammar', 'Grammar'], ['rules', 'Rules']];
-let current = 'home', keyHandler = null;
+let current = 'home', keyHandler = null, onPage = true; // onPage: a plain page, not a quiz in progress
 function renderNav() {
   const due = dueWords().length, g = grammarAcc(), l = ADJ.filter((a) => learned(a.id)).length;
   document.getElementById('nav').replaceChildren(...NAV.map(([id, label]) => h('button', { type: 'button', 'aria-current': id === current ? 'page' : null, onclick: () => go(id) }, label,
     id === 'vocab' && due ? h('span.badge', { title: due + ' words due for review' }, String(due)) : null,
     id === 'grammar' && g != null ? h('span.meta', null, g + '%') : null)));
-  document.getElementById('side-foot').replaceChildren(h('div', null, l + ' / ' + ADJ.length + ' words learned'), meter((l / ADJ.length) * 100));
+  document.getElementById('side-foot').replaceChildren(h('div', null, l + ' / ' + ADJ.length + ' words learned'), meter((l / ADJ.length) * 100),
+    h('div.sync', { style: 'margin-top:0.6rem;opacity:0.8' }, SYNC[syncState]), cloud ? null : backupButtons());
 }
 function go(page, view) {
   page = OLD[page] || page;
   if (!PAGES[page]) page = 'home';
-  current = page; keyHandler = null;
+  current = page; keyHandler = null; onPage = !view;
   if (location.hash.slice(1) !== page) history.replaceState(null, '', '#' + page);
   renderNav();
   const el = view || PAGES[page]();
@@ -665,16 +711,18 @@ function Learn(ids) {
   }
   function recall() {
     const queue = shuffle(words.flatMap((a) => [['fr-en', a.id], ['all', a.id]]));
-    const answered = {};
+    const answered = {}, fresh = Object.fromEntries(words.filter((a) => !learned(a.id)).map((a) => [a.id, true]));
     stage('Recall', Run({
       title: 'Recall: meaning and every form', total: queue.length, again: true,
       next: () => { const x = queue.shift(); return x ? question([x[0]], [x[1]]) : null; },
-      onAnswer: (q, r) => { answered[q.word] = true; if (!r.ok) missed[q.word] = true; },
+      // Saved as you go, so leaving mid-recall keeps every word you were quizzed on.
+      onAnswer: (q, r) => {
+        answered[q.word] = true; if (!r.ok) missed[q.word] = true;
+        if (fresh[q.word]) { P.cards[q.word] = review(null, missed[q.word] ? 1 : 3, Date.now()); save(); renderNav(); }
+      },
       back: () => go('vocab'),
       summary: () => {
-        const now = Date.now(), got = words.filter((a) => answered[a.id]); // ending early only counts the words you were quizzed on
-        got.forEach((a) => { if (!P.cards[a.id]) P.cards[a.id] = review(null, missed[a.id] ? 1 : 3, now); });
-        save(); renderNav();
+        const got = words.filter((a) => answered[a.id]);
         if (!got.length) return null;
         return h('div', null, h('div.words', { lang: 'fr' }, got.map((a) => h('span', { style: missed[a.id] ? 'border-color:rgb(var(--warm)/.5);color:rgb(var(--warm))' : '' }, a.f[0] + (missed[a.id] ? ' · comes back sooner' : '')))),
           h('p.note', null, 'Learned. The first review is in about 10 minutes, the gap that makes words stick.'),
@@ -845,6 +893,7 @@ function Home() {
 }
 
 go(location.hash.slice(1));
+connect();
 </script>
 </body>
 </html>
