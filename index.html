@@ -142,6 +142,13 @@ h2 { font: 700 1.5rem/1.2 'Cormorant Garamond', Georgia, serif; margin: 0 0 0.65
 .note-box b { font-weight: 800; }
 .remind { margin: 0.6rem 0; padding: 0.55rem 0.85rem; border-left: 3px solid rgb(var(--accent) / 0.6); background: rgb(var(--accent-soft) / 0.45); border-radius: 0 0.5rem 0.5rem 0; line-height: 1.5; }
 .remind b { color: rgb(var(--accent)); font-weight: 800; }
+.before-box { margin: 1.1rem 0; padding: 1.1rem 1.3rem; border: 2px solid rgb(var(--accent) / 0.45); background: rgb(var(--accent-soft) / 0.5); border-radius: 0.9rem; }
+.before-head { font-size: 1.7rem; font-weight: 800; color: rgb(var(--accent)); letter-spacing: -0.01em; }
+.before-head b { text-transform: uppercase; text-decoration: underline; text-underline-offset: 0.2em; }
+.before-ex { display: grid; gap: 0.3rem; margin: 0.6rem 0; }
+.before-ex div { display: flex; flex-wrap: wrap; gap: 0 0.9rem; align-items: baseline; }
+.before-ex .fr { font-family: 'Cormorant Garamond', serif; font-size: 1.7rem; font-weight: 600; }
+.before-box p { margin: 0.3rem 0 0; }
 .retype { margin: 0.9rem 0 0.4rem; padding: 1rem; border: 2px dashed rgb(var(--warm) / 0.55); border-radius: 0.75rem; background: rgb(var(--warm-soft) / 0.5); }
 .formgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 0.65rem; }
 .formgrid .field.m label { color: rgb(var(--gm)); } .formgrid .field.f label { color: rgb(var(--gf)); }
@@ -648,6 +655,16 @@ function LearnTab() {
     h('p.note', null, 'Groups of 5: meet each word and copy out all its forms, match them up, then recall the meaning and every form. Words you miss come back until you get them.'),
     h('button.btn.primary', { type: 'button', onclick: () => go('vocab', Learn(group.map((a) => a.id))) }, 'Start learning →'));
 }
+// The big "goes before the noun" block on a BAGS word, with phrases made from the word itself.
+function beforeBox(a) {
+  const ns = window.FR.NOUNS.filter((n) => a.on.includes(n.k) && !n.v);
+  const m = pick(ns.filter((n) => n.g === 'm')), f = pick(ns.filter((n) => n.g === 'f'));
+  const rows = [m && window.FR.phrase(a, m, false), f && window.FR.phrase(a, f, false), m && window.FR.phrase(a, m, true)].filter(Boolean);
+  return h('div.before-box', null,
+    h('div.before-head', null, 'Goes ', h('b', null, 'before'), ' the noun'),
+    h('div.before-ex', null, rows.map((p) => h('div', null, h('span.fr', { lang: 'fr' }, p.fr), h('span.muted', null, p.en)))),
+    h('p', null, h('b', null, 'BAGS: '), 'beauty, age, goodness, size. Plural before the noun → ', h('b', null, 'de'), ', not des.'));
+}
 function Steps(on) {
   const names = ['Meet', 'Match', 'Recall'], k = names.indexOf(on);
   return h('div.steps', null, names.map((s, i) => [i ? h('span.sep') : null, h('span' + (i === k ? '.on' : i < k ? '.past' : ''), null, h('i', null, i < k ? '✓' : String(i + 1)), s)]));
@@ -671,9 +688,10 @@ function Learn(ids) {
     const all = frBoxes.concat(en);
     all.forEach((x, k) => x.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); k < all.length - 1 ? all[k + 1].focus() : nextW(); } }));
     const card = h('div.qcard.meet', null,
-      h('div.chips', null, h('span.chip.accent', null, 'New word ' + (i + 1) + ' of ' + words.length), h('span.chip', null, GROUPS[a.group]), a.before ? h('span.chip', null, 'goes before the noun') : null),
+      h('div.chips', null, h('span.chip.accent', null, 'New word ' + (i + 1) + ' of ' + words.length), h('span.chip', null, GROUPS[a.group])),
       h('div.word.fr', { lang: 'fr', style: 'margin-top:1rem' }, a.f[0], a.alt ? h('span.tag.warm', null, a.alt) : null),
       h('div.meaning', null, a.en.join(', ')),
+      a.before ? beforeBox(a) : null,
       formsRow(a),
       a.note ? h('div.note-box', null, a.note) : null,
       a.alt ? h('div.note-box', null, h('b', null, a.alt + ' '), 'before a masculine noun starting with a vowel or silent h: un ' + a.alt + ' ami.') : null,
