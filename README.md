@@ -24,7 +24,7 @@ node test.js   # checks the phrases against the class sheet and that every quest
 
 To add a lesson: add it to `LESSONS` in `french.js` and tag its words with `lesson: '<id>'`.
 
-Progress is saved in the browser (localStorage, `frhub:*`); nothing is sent anywhere.
+Progress is saved in the browser (localStorage, `frhub:*`). Opened as a Claude page, it also syncs to your Claude account, so it follows you across devices. On the GitHub Pages copy, use Copy / Paste backup in the sidebar to move it.
 
 ## Deploy
 
