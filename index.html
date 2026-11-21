@@ -140,6 +140,8 @@ h2 { font: 700 1.5rem/1.2 'Cormorant Garamond', Georgia, serif; margin: 0 0 0.65
 .translation .fr { font-size: 1.6rem; display: block; }
 .note-box { border-radius: 0.75rem; padding: 0.8rem 1rem; margin: 0.75rem 0; background: rgb(var(--sunken)); line-height: 1.55; }
 .note-box b { font-weight: 800; }
+.remind { margin: 0.6rem 0; padding: 0.55rem 0.85rem; border-left: 3px solid rgb(var(--accent) / 0.6); background: rgb(var(--accent-soft) / 0.45); border-radius: 0 0.5rem 0.5rem 0; line-height: 1.5; }
+.remind b { color: rgb(var(--accent)); font-weight: 800; }
 .retype { margin: 0.9rem 0 0.4rem; padding: 1rem; border: 2px dashed rgb(var(--warm) / 0.55); border-radius: 0.75rem; background: rgb(var(--warm-soft) / 0.5); }
 .formgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 0.65rem; }
 .formgrid .field.m label { color: rgb(var(--gm)); } .formgrid .field.f label { color: rgb(var(--gf)); }
@@ -547,6 +549,7 @@ function QCard(q, onDone) {
     h('div.chips', null, h('span.chip.accent', null, KIND[q.topic] || q.topic), q.again ? h('span.chip.warm', null, '↻ Again') : null, byId[q.word] ? h('span.chip', null, 'Leçon ' + byId[q.word].lesson) : null),
     h('div.show' + (q.showLang === 'fr' ? '.fr' : '.en'), { lang: q.showLang }, q.show),
     h('p.prompt', null, q.ask, q.sub ? h('span.muted', null, ' · ' + q.sub) : null),
+    remindFor(q),
     body, controls, hintEl, result);
   return el;
 }
@@ -839,6 +842,22 @@ const RULES = {
     h('p', null, h('span.fr', { lang: 'fr' }, 'Les cheveux'), ' is always masculine plural, even for a girl:'),
     ex([['He has black hair.', 'Il a les cheveux bruns.'], ['She has brown hair.', 'Elle a les cheveux châtains.'], ['She has red hair.', 'Elle a les cheveux roux.']])),
 };
+// One-line reminders of the rules that trip people up, shown on the dashboard and on the cards they apply to.
+const REMIND = {
+  before: ['Before the noun', 'BAGS (beauty, age, goodness, size) go before the noun: ' + BEFORE.join(', ') + '. Everything else goes after.'],
+  de: ['de, not des', 'A plural adjective before the noun takes de: de nouveaux amis, but des amis sympathiques.'],
+  bel: ['bel, nouvel, vieil', 'Masculine singular before a vowel or silent h: un bel homme, un nouvel ami, un vieil oiseau.'],
+  agree: ['Agreement', '+e for feminine, +s for plural. Already ends in -e: no extra -e. -x words add no -s. Marron never changes.'],
+  hair: ['Hair', 'Les cheveux is masculine plural, even for a girl: elle a les cheveux bruns.'],
+};
+const REMIND_OF = { sent: ['agree', 'before'], phrase: ['before', 'de', 'bel'], place: ['before'], bel: ['bel'], de: ['de'], hair: ['hair'] };
+function remindFor(q) {
+  const a = byId[q.word];
+  const keys = REMIND_OF[q.topic] || (a && a.before ? (a.alt && q.topic === 'all' ? ['bel'] : ['before']) : []);
+  if (!keys.length) return null;
+  const [title, text] = REMIND[pick(keys)];
+  return h('p.remind', null, h('b', null, title + ': '), text);
+}
 function Rules() {
   const el = h('div.rules', null, Object.values(RULES).map((r) => r()));
   [...el.children].forEach((c, i) => fadeUp(c, 50 * i));
@@ -889,7 +908,10 @@ function Home() {
             h('button', { type: 'button', onclick: () => startGrammar([t], 10) }, label),
             meter(v, v == null ? null : v >= 80 ? 'good' : v < 60 ? 'low' : null),
             h('span.pct', null, v == null ? 'new' : v + '%'));
-        }))));
+        }),
+        h('h2', { style: 'margin-top:1.6rem' }, 'Remember'),
+        Object.values(REMIND).map(([title, text]) => h('p.remind', null, h('b', null, title + ': '), text)),
+        h('button.btn.ghost.sm', { type: 'button', onclick: () => go('rules') }, 'All the rules →'))));
 }
 
 go(location.hash.slice(1));
