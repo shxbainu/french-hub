@@ -284,7 +284,7 @@
       const a = pick(pool((x) => x.on)), n = pick(NOUNS.filter((x) => fits(a, x))), pl = Math.random() < 0.45;
       const p = phrase(a, n, pl), noun = pl ? n.pl : n.sg, right = sayIt(p.art, p.form, noun, pl, a.before);
       const base = { topic: 'fix', word: a.id, ask: 'Correct the mistake, if there is one', showLang: 'fr', lang: 'fr', hint: HINT.phrase, full: right, en: (pl ? 'They are ' : "It's ") + p.en + '.' };
-      if (Math.random() < 0.3) return { ...base, show: right, answers: [right, 'correct'], why: 'No mistake. ' + whyPlace(a) };
+      if (Math.random() < 0.1) return { ...base, show: right, answers: [right, 'correct'], why: 'No mistake. ' + whyPlace(a) };
       const errs = [[sayIt(p.art, p.form, noun, pl, !a.before), whyPlace(a)]];
       const wrong = [...new Set(a.f.concat(a.alt || []))].filter((f) => f !== p.form);
       if (wrong.length) errs.push([sayIt(p.art, pick(wrong), noun, pl, a.before), 'Agreement: ' + kind(n, pl) + ', so ' + p.form + '.']);
