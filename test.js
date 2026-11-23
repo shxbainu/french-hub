@@ -36,7 +36,7 @@ for (const [t] of TOPICS.concat(FR.SHEET)) for (let i = 0; i < 400; i++) {
   else if (x.cells) assert.ok(x.cells.every((c) => check({ lang: 'fr', answers: c.answers }, c.answers[0]).ok), t);
   else assert.ok(check(x, x.answers[0]).ok, t);
   assert.ok(x.show && x.why, t);
-  assert.ok(A[x.word], t + ' has a word');
+  assert.ok(A[x.word] || (t === 'gender' && FR.LNOUNS.some((n) => n.w === x.word)), t + ' has a word');
   assert.ok(x.hint, t + ' has a hint');
   if (x.full) assert.ok(x.en && !x.full.includes('___'), t + ' full sentence + translation');
 }
@@ -92,10 +92,17 @@ assert.deepEqual(A.russe.f, ['russe', 'russe', 'russes', 'russes']);
 assert.ok(seen('opp', /^désagréables$/));
 
 // Quizzes mostly use the class sheet's words, not the cognates / nationalities.
-for (const [t] of FR.SHEET) {
+for (const [t] of FR.SHEET.filter(([t]) => t !== 'gender')) {
   let extra = 0;
   for (let i = 0; i < 2000; i++) { const g = A[FR.question([t]).word].group; if (g === 'cog' || g === 'nat') extra++; }
   assert.ok(extra / 2000 < 0.25, t + ': ' + extra / 20 + '% cognates/nationalities');
 }
+
+// Noun gender: every l' noun starts with a vowel or h, has a gender, and the tips are right.
+for (const n of FR.LNOUNS) assert.ok(/^[aeiouéèêâîôûœh]/i.test(n.w) && 'mf'.includes(n.g), n.w);
+assert.equal(new Set(FR.LNOUNS.map((n) => n.w)).size, FR.LNOUNS.length);
+assert.match(FR.genderTip(FR.LNOUNS.find((n) => n.w === 'université')), /-té/);
+assert.match(FR.genderTip(FR.LNOUNS.find((n) => n.w === 'été')), /masculine/);
+assert.equal(check({ lang: 'fr', answers: ['une', 'une école'] }, 'une école').ok, true);
 
 console.log('ok');

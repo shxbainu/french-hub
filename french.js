@@ -85,15 +85,50 @@
     N('histoire', 'histoires', 'f', 'story', 'stories', 't', 1), N('école', 'écoles', 'f', 'school', 'schools', 't', 1),
   ];
 
+  // Nouns that start with a vowel or silent h: l' hides their gender, so it has to be learned with un / une.
+  // tip: overrides the ending rule for exceptions.
+  const G = (w, g, en, tip) => ({ w, g, en, tip });
+  const LNOUNS = [
+    G('ordinateur', 'm', 'computer'), G('examen', 'm', 'exam'), G('emploi du temps', 'm', 'schedule'), G('appartement', 'm', 'apartment'),
+    G('arbre', 'm', 'tree'), G('oiseau', 'm', 'bird'), G('homme', 'm', 'man'), G('hôpital', 'm', 'hospital'), G('hôtel', 'm', 'hotel'),
+    G('avion', 'm', 'plane'), G('aéroport', 'm', 'airport'), G('objet', 'm', 'object'), G('oncle', 'm', 'uncle'), G('animal', 'm', 'animal'),
+    G('éléphant', 'm', 'elephant'), G('insecte', 'm', 'insect'), G('étage', 'm', 'floor (of a building)'), G('agenda', 'm', 'planner'), G('escalier', 'm', 'staircase'),
+    G('exercice', 'm', 'exercise'), G('ascenseur', 'm', 'elevator'), G('endroit', 'm', 'place'), G('instrument', 'm', 'instrument'),
+    G('été', 'm', 'summer', 'Looks like -té (feminine), but été is masculine: all the seasons are masculine.'),
+    G('hiver', 'm', 'winter', 'All the seasons are masculine.'), G('automne', 'm', 'autumn', 'All the seasons are masculine.'),
+    G('école', 'f', 'school'), G('histoire', 'f', 'story, history'), G('université', 'f', 'university'), G('activité', 'f', 'activity'),
+    G('usine', 'f', 'factory'), G('architecture', 'f', 'architecture'), G('invitation', 'f', 'invitation'), G('heure', 'f', 'hour'),
+    G('horloge', 'f', 'clock'), G('erreur', 'f', 'mistake', 'Exception: -eur is usually masculine, but erreur is feminine (so is une couleur).'), G('idée', 'f', 'idea'),
+    G('image', 'f', 'picture', 'Exception: -age is usually masculine, but image is feminine (like la page).'), G('année', 'f', 'year'),
+    G('affiche', 'f', 'poster'), G('église', 'f', 'church'), G('adresse', 'f', 'address'), G('île', 'f', 'island'), G('équipe', 'f', 'team'),
+    G('émission', 'f', 'TV show'), G('omelette', 'f', 'omelet'), G('armoire', 'f', 'wardrobe'), G('assiette', 'f', 'plate'),
+    G('entreprise', 'f', 'company'), G('orange', 'f', 'orange (the fruit)'),
+  ];
+  // The ending rules that do work; otherwise there's nothing to go on but memory.
+  function genderTip(n) {
+    if (n.tip) return n.tip;
+    const w = n.w, ends = (...e) => e.some((x) => w.endsWith(x));
+    if (ends('tion', 'sion')) return '-tion / -sion words are feminine.';
+    if (ends('té')) return '-té words are feminine.';
+    if (ends('ée')) return '-ée words are usually feminine (but le lycée, le musée).';
+    if (ends('ie')) return '-ie words are usually feminine.';
+    if (ends('ure')) return '-ure words are usually feminine.';
+    if (ends('age')) return '-age words are usually masculine.';
+    if (ends('ment')) return '-ment words are masculine.';
+    if (ends('eau')) return '-eau words are usually masculine.';
+    if (ends('eur')) return '-eur words for machines and jobs are usually masculine.';
+    return 'No ending rule for this one: learn it as ' + (n.g === 'f' ? 'une ' : 'un ') + w + '.';
+  }
+
   // Vocab drills feed the spaced-repetition review; grammar drills are sentence work with a rule beside them.
   const VOCAB = [['fr-en', 'Meaning: French → English'], ['en-fr', 'Meaning: English → French'], ['forms', 'One form'], ['all', 'All four forms']];
   const GRAMMAR = [
     ['sent', 'Sentences'], ['phrase', 'Write the phrase'], ['place', 'Before or after the noun?'],
-    ['bel', 'bel, nouvel, vieil'], ['de', 'de or des?'], ['hair', 'Hair'],
+    ['bel', 'bel, nouvel, vieil'], ['de', 'de or des?'], ['hair', 'Hair'], ['gender', 'Noun gender (l’ words)'],
   ];
   const TOPICS = VOCAB.concat(GRAMMAR);
   // Which rule cards to show beside each grammar drill (ids of the cards on the Rules page).
-  const RULE_OF = { sent: ['agree', 'before'], phrase: ['before', 'agree'], place: ['before'], bel: ['bel'], de: ['de'], hair: ['hair'] };
+  const RULE_OF = { sent: ['agree', 'before'], phrase: ['before', 'agree'], place: ['before'], bel: ['bel'], de: ['de'], hair: ['hair'], gender: ['gender'] };
 
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
   // focus: word ids to drill (trouble words); falls back to every word when none fit the question.
@@ -252,6 +287,7 @@
     ['opp', 'III', 'Les contraires', 'Write the opposite adjective, agreeing with who it describes.', 6],
     ['fempl', 'IV', 'Mettez ces mots au féminin pluriel', 'Give the feminine plural (if it can change).', 10],
     ['trad', 'V', 'Traduction', 'Translate into French.', 5],
+    ['gender', 'VI', 'Le genre des noms', 'Write un or une. Each of these is l’… with “the”, which hides the gender.', 8],
   ];
   const sayIt = (art, form, noun, pl, before) => (pl ? 'Ce sont ' : "C'est ") + art + ' ' + (before ? form + ' ' + noun : noun + ' ' + form) + '.';
   const kind = (n, pl) => n.sg + ' is ' + (n.g === 'f' ? 'feminine' : 'masculine') + (pl ? ' plural' : ' singular');
@@ -283,6 +319,12 @@
   const OPP = [['beau', 'laid'], ['jeune', 'vieux'], ['petit', 'grand'], ['heureux', 'malheureux'], ['calme', 'nerveux'],
     ['agréable', 'désagréable'], ['poli', 'impoli'], ['patient', 'impatient'], ['optimiste', 'pessimiste']];
   Object.assign(Q, {
+    gender() {
+      const n = pick(LNOUNS), art = n.g === 'f' ? 'une' : 'un';
+      return { topic: 'gender', word: n.w, ask: 'un or une?', show: "l'" + n.w, showLang: 'fr', sub: n.en, choices: ['un', 'une'], answers: [art, art + ' ' + n.w],
+        why: n.w + ' is ' + (n.g === 'f' ? 'feminine' : 'masculine') + '. ' + genderTip(n), full: art + ' ' + n.w, en: (/^[aeiou]/i.test(n.en) ? 'an ' : 'a ') + n.en,
+        hint: 'Check the ending: -tion, -té, -ie, -ure lean feminine; -age, -ment, -eau lean masculine.' };
+    },
     fix() {
       const a = pick(pool((x) => x.on)), n = pick(NOUNS.filter((x) => fits(a, x))), pl = Math.random() < 0.45;
       const p = phrase(a, n, pl), noun = pl ? n.pl : n.sg, right = sayIt(p.art, p.form, noun, pl, a.before);
@@ -379,7 +421,7 @@
     return c;
   }
 
-  const api = { SHEET, ADJ, LESSONS, GROUPS, SLOT, BEFORE, NOUNS, TOPICS, VOCAB, GRAMMAR, RULE_OF, Q, review, retrievability, DAY, MIN, question, check, phrase, formFor, byId };
+  const api = { LNOUNS, genderTip, SHEET, ADJ, LESSONS, GROUPS, SLOT, BEFORE, NOUNS, TOPICS, VOCAB, GRAMMAR, RULE_OF, Q, review, retrievability, DAY, MIN, question, check, phrase, formFor, byId };
   if (typeof module !== 'undefined') module.exports = api;
   else window.FR = api;
 })();
