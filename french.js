@@ -85,24 +85,13 @@
     N('histoire', 'histoires', 'f', 'story', 'stories', 't', 1), N('école', 'écoles', 'f', 'school', 'schools', 't', 1),
   ];
 
-  // Nouns that start with a vowel or silent h: l' hides their gender, so it has to be learned with un / une.
-  // tip: overrides the ending rule for exceptions.
+  // Nouns from the class sheets that start with a vowel or silent h: l' hides their gender, so learn them with un / une.
+  // tip: overrides the ending rule.
   const G = (w, g, en, tip) => ({ w, g, en, tip });
   const LNOUNS = [
-    G('ordinateur', 'm', 'computer'), G('examen', 'm', 'exam'), G('emploi du temps', 'm', 'schedule'), G('appartement', 'm', 'apartment'),
-    G('arbre', 'm', 'tree'), G('oiseau', 'm', 'bird'), G('homme', 'm', 'man'), G('hôpital', 'm', 'hospital'), G('hôtel', 'm', 'hotel'),
-    G('avion', 'm', 'plane'), G('aéroport', 'm', 'airport'), G('objet', 'm', 'object'), G('oncle', 'm', 'uncle'), G('animal', 'm', 'animal'),
-    G('éléphant', 'm', 'elephant'), G('insecte', 'm', 'insect'), G('étage', 'm', 'floor (of a building)'), G('agenda', 'm', 'planner'), G('escalier', 'm', 'staircase'),
-    G('exercice', 'm', 'exercise'), G('ascenseur', 'm', 'elevator'), G('endroit', 'm', 'place'), G('instrument', 'm', 'instrument'),
-    G('été', 'm', 'summer', 'Looks like -té (feminine), but été is masculine: all the seasons are masculine.'),
-    G('hiver', 'm', 'winter', 'All the seasons are masculine.'), G('automne', 'm', 'autumn', 'All the seasons are masculine.'),
-    G('école', 'f', 'school'), G('histoire', 'f', 'story, history'), G('université', 'f', 'university'), G('activité', 'f', 'activity'),
-    G('usine', 'f', 'factory'), G('architecture', 'f', 'architecture'), G('invitation', 'f', 'invitation'), G('heure', 'f', 'hour'),
-    G('horloge', 'f', 'clock'), G('erreur', 'f', 'mistake', 'Exception: -eur is usually masculine, but erreur is feminine (so is une couleur).'), G('idée', 'f', 'idea'),
-    G('image', 'f', 'picture', 'Exception: -age is usually masculine, but image is feminine (like la page).'), G('année', 'f', 'year'),
-    G('affiche', 'f', 'poster'), G('église', 'f', 'church'), G('adresse', 'f', 'address'), G('île', 'f', 'island'), G('équipe', 'f', 'team'),
-    G('émission', 'f', 'TV show'), G('omelette', 'f', 'omelet'), G('armoire', 'f', 'wardrobe'), G('assiette', 'f', 'plate'),
-    G('entreprise', 'f', 'company'), G('orange', 'f', 'orange (the fruit)'),
+    G('ami', 'm', 'friend (a boy)', 'ami is masculine; amie (with -e) is feminine.'), G('amie', 'f', 'friend (a girl)', 'amie, with -e, is feminine; ami is masculine.'),
+    G('appartement', 'm', 'apartment'), G('arbre', 'm', 'tree'), G('école', 'f', 'school'),
+    G('histoire', 'f', 'story'), G('homme', 'm', 'man'), G('oiseau', 'm', 'bird'),
   ];
   // The ending rules that do work; otherwise there's nothing to go on but memory.
   function genderTip(n) {
@@ -287,7 +276,7 @@
     ['opp', 'III', 'Les contraires', 'Write the opposite adjective, agreeing with who it describes.', 6],
     ['fempl', 'IV', 'Mettez ces mots au féminin pluriel', 'Give the feminine plural (if it can change).', 10],
     ['trad', 'V', 'Traduction', 'Translate into French.', 5],
-    ['gender', 'VI', 'Le genre des noms', 'Write un or une. Each of these is l’… with “the”, which hides the gender.', 8],
+    ['gender', 'VI', 'Le genre des noms', 'Write un or une. Each of these is l’… with “the”, which hides the gender.', 6],
   ];
   const sayIt = (art, form, noun, pl, before) => (pl ? 'Ce sont ' : "C'est ") + art + ' ' + (before ? form + ' ' + noun : noun + ' ' + form) + '.';
   const kind = (n, pl) => n.sg + ' is ' + (n.g === 'f' ? 'feminine' : 'masculine') + (pl ? ' plural' : ' singular');
@@ -323,7 +312,7 @@
       const n = pick(LNOUNS), art = n.g === 'f' ? 'une' : 'un';
       return { topic: 'gender', word: n.w, ask: 'un or une?', show: "l'" + n.w, showLang: 'fr', sub: n.en, choices: ['un', 'une'], answers: [art, art + ' ' + n.w],
         why: n.w + ' is ' + (n.g === 'f' ? 'feminine' : 'masculine') + '. ' + genderTip(n), full: art + ' ' + n.w, en: (/^[aeiou]/i.test(n.en) ? 'an ' : 'a ') + n.en,
-        hint: 'Check the ending: -tion, -té, -ie, -ure lean feminine; -age, -ment, -eau lean masculine.' };
+        hint: 'Think of it with un or une: un ___ or une ___?' };
     },
     fix() {
       const a = pick(pool((x) => x.on)), n = pick(NOUNS.filter((x) => fits(a, x))), pl = Math.random() < 0.45;

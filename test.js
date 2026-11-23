@@ -101,8 +101,8 @@ for (const [t] of FR.SHEET.filter(([t]) => t !== 'gender')) {
 // Noun gender: every l' noun starts with a vowel or h, has a gender, and the tips are right.
 for (const n of FR.LNOUNS) assert.ok(/^[aeiouéèêâîôûœh]/i.test(n.w) && 'mf'.includes(n.g), n.w);
 assert.equal(new Set(FR.LNOUNS.map((n) => n.w)).size, FR.LNOUNS.length);
-assert.match(FR.genderTip(FR.LNOUNS.find((n) => n.w === 'université')), /-té/);
-assert.match(FR.genderTip(FR.LNOUNS.find((n) => n.w === 'été')), /masculine/);
+assert.match(FR.genderTip(FR.LNOUNS.find((n) => n.w === 'appartement')), /-ment/);
+assert.match(FR.genderTip(FR.LNOUNS.find((n) => n.w === 'école')), /une école/);
 assert.equal(check({ lang: 'fr', answers: ['une', 'une école'] }, 'une école').ok, true);
 
 console.log('ok');

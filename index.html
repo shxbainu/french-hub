@@ -907,13 +907,9 @@ const RULES = {
     h('p', null, 'When a plural adjective comes before the noun, use ', h('b', null, 'de'), ' instead of ', h('b', null, 'des'), '.'),
     ex([['new friends', 'de nouveaux amis'], ['nice friends', 'des amis sympathiques'], ['beautiful high schools', 'de beaux lycées']])),
   gender: () => card('l’ hides the gender',
-    h('p', null, 'With “the”, a noun starting with a vowel or silent h is just l’: l’école, l’ordinateur. Learn each one with ', h('b', null, 'un / une'), ' instead.'),
-    h('div.scroll', null, h('table', null, h('tbody', null, [
-      ['Feminine', '-tion, -sion, -té, -ée, -ie, -ure', 'une invitation, une université, une idée'],
-      ['Masculine', '-age, -ment, -eau, -eur, the seasons', 'un étage, un appartement, un oiseau, un été'],
-      ['Exceptions', '', 'une image, une erreur, un musée, un lycée'],
-    ].map(([g, e, x]) => h('tr', null, h('td', null, h('b', null, g)), h('td', null, e), h('td.fr', { lang: 'fr' }, x)))))),
-    ['m', 'f'].map((g) => h('p', null, h('b', null, g === 'm' ? 'un ' : 'une '), h('span.fr', { lang: 'fr' }, LNOUNS.filter((n) => n.g === g).map((n) => n.w).join(', '))))),
+    h('p', null, 'With “the”, a noun starting with a vowel or silent h is just l’: l’école, l’oiseau. Learn each one with ', h('b', null, 'un / une'), ' instead.'),
+    ['m', 'f'].map((g) => h('p', null, h('b', null, g === 'm' ? 'un ' : 'une '), h('span.fr', { lang: 'fr' }, LNOUNS.filter((n) => n.g === g).map((n) => n.w).join(', ')))),
+    h('p.note', null, 'Ending clues: -ment and -eau are masculine (un appartement, un oiseau). élève and enfant can be either: un élève / une élève, depending on the person.')),
   hair: () => card('Hair',
     h('p', null, 'Four special adjectives describe hair: ', h('span.fr', { lang: 'fr' }, 'brun, châtain, blond, roux'), '. Used for the person, they agree with the person:'),
     ex([['He is black-haired.', 'Il est brun.'], ['She is brown-haired.', 'Elle est châtain.'], ['They are blond.', 'Ils sont blonds.'], ['They (f.) are red-haired.', 'Elles sont rousses.']]),
@@ -927,7 +923,7 @@ const REMIND = {
   bel: ['bel, nouvel, vieil', 'Masculine singular before a vowel or silent h: un bel homme, un nouvel ami, un vieil oiseau.'],
   agree: ['Agreement', '+e for feminine, +s for plural. Already ends in -e: no extra -e. -s / -x words add no -s. -ien → -ienne. Marron never changes.'],
   hair: ['Hair', 'Les cheveux is masculine plural, even for a girl: elle a les cheveux bruns.'],
-  gender: ['l’ hides the gender', 'Learn l’ nouns with un / une: un ordinateur, une école. -tion, -té, -ie, -ure lean feminine; -age, -ment, -eau lean masculine.'],
+  gender: ['l’ hides the gender', 'Learn l’ nouns with un / une: un homme, un oiseau, un appartement, une école, une histoire.'],
 };
 const REMIND_OF = { sent: ['agree', 'before'], phrase: ['before', 'de', 'bel'], place: ['before'], bel: ['bel'], de: ['de'], hair: ['hair'], gender: ['gender'] };
 function remindFor(q) {
