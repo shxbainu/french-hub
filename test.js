@@ -91,4 +91,11 @@ assert.deepEqual(A.coréen.f, ['coréen', 'coréenne', 'coréens', 'coréennes']
 assert.deepEqual(A.russe.f, ['russe', 'russe', 'russes', 'russes']);
 assert.ok(seen('opp', /^désagréables$/));
 
+// Quizzes mostly use the class sheet's words, not the cognates / nationalities.
+for (const [t] of FR.SHEET) {
+  let extra = 0;
+  for (let i = 0; i < 2000; i++) { const g = A[FR.question([t]).word].group; if (g === 'cog' || g === 'nat') extra++; }
+  assert.ok(extra / 2000 < 0.25, t + ': ' + extra / 20 + '% cognates/nationalities');
+}
+
 console.log('ok');

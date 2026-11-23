@@ -100,7 +100,10 @@
   let focus = [];
   function pool(pred = () => true) {
     const all = ADJ.filter(pred), f = all.filter((a) => focus.includes(a.id));
-    return f.length ? f : all;
+    if (f.length) return f;
+    // Drills and quizzes lean on the class sheet's words; cognates and nationalities only come up now and then.
+    const core = all.filter((a) => a.group !== 'cog' && a.group !== 'nat');
+    return core.length && Math.random() < 0.85 ? core : all;
   }
   const byId = Object.fromEntries(ADJ.map((a) => [a.id, a]));
   const slotOf = (g, pl) => (g === 'f' ? 1 : 0) + (pl ? 2 : 0);
@@ -255,7 +258,7 @@
   // Two adjectives on one noun: the BAGS one (at most one) goes before, the rest after, joined by et.
   function twoAdj() {
     const n = pick(NOUNS), pl = Math.random() < 0.4, slot = slotOf(n.g, pl), noun = pl ? n.pl : n.sg;
-    const fit = ADJ.filter((x) => x.id !== 'raide' && fitsPred(x, n));
+    const fit = pool((x) => x.id !== 'raide' && fitsPred(x, n));
     let a, b;
     do { a = pick(fit); b = pick(fit); } while (a === b || (a.before && b.before) || (a.hair && b.hair) || (a.group === 'nat' && b.group === 'nat'));
     const bef = [a, b].find((x) => x.before), aft = [a, b].filter((x) => !x.before);
@@ -304,7 +307,7 @@
         return { topic: 'opp', word: y.id, ask: 'The opposite', show: 'Mes cheveux ne sont pas ' + x.f[2] + ', ils sont …', showLang: 'fr', lang: 'fr', answers: [y.f[2]],
           why: 'The opposite of ' + x.id + ' is ' + y.id + '. Les cheveux is masculine plural: ' + y.f[2] + '.', hint: 'Les cheveux: masculine plural.' };
       }
-      let [x, y] = pick(OPP);
+      let [x, y] = pick(Math.random() < 0.8 ? OPP.slice(0, 5) : OPP.slice(5)); // the first 5 are the sheet's words
       if (x !== 'calme' && Math.random() < 0.5) [x, y] = [y, x];
       const X = byId[x] || CALME, Y = byId[y], s1 = who([]), s2 = who(s1.name.split(' et '));
       return { topic: 'opp', word: Y.id, ask: 'The opposite', show: s1.name + s1.verb + X.f[s1.slot] + ', mais ' + s2.name + s2.verb + '…', showLang: 'fr', lang: 'fr', answers: [Y.f[s2.slot]],
