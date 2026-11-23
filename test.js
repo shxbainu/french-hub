@@ -105,4 +105,14 @@ assert.match(FR.genderTip(FR.LNOUNS.find((n) => n.w === 'appartement')), /-ment/
 assert.match(FR.genderTip(FR.LNOUNS.find((n) => n.w === 'école')), /une école/);
 assert.equal(check({ lang: 'fr', answers: ['une', 'une école'] }, 'une école').ok, true);
 
+// Traps: les cheveux is always masculine plural, brown things are marron, brown hair is châtains.
+for (let i = 0; i < 2000; i++) {
+  const x = FR.question(['trap']);
+  if (/les cheveux ___/.test(x.show)) assert.ok(x.answers.every((a) => FR.ADJ.some((d) => d.f[2] === a)), x.show + ' ' + x.answers);
+  if (/(est|sont) ___ \(brown\)/.test(x.show) && !/^[A-Z][a-zé]+ (et [A-Z][a-zé]+ )?(est|sont)/.test(x.show.replace(/^(Le|La|Les|L')/, ''))) assert.equal(x.answers[0], 'marron', x.show);
+  if (/cheveux ___ \(brown\)/.test(x.show)) assert.equal(x.answers[0], 'châtains');
+}
+assert.ok(seen('trap', /^sont$/));
+assert.ok(check({ lang: 'fr', answers: ['bruns', 'noirs'] }, 'noirs').ok);
+
 console.log('ok');

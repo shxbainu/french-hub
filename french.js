@@ -113,11 +113,11 @@
   const VOCAB = [['fr-en', 'Meaning: French → English'], ['en-fr', 'Meaning: English → French'], ['forms', 'One form'], ['all', 'All four forms']];
   const GRAMMAR = [
     ['sent', 'Sentences'], ['phrase', 'Write the phrase'], ['place', 'Before or after the noun?'],
-    ['bel', 'bel, nouvel, vieil'], ['de', 'de or des?'], ['hair', 'Hair'], ['gender', 'Noun gender (l’ words)'],
+    ['bel', 'bel, nouvel, vieil'], ['de', 'de or des?'], ['hair', 'Hair'], ['gender', 'Noun gender (l’ words)'], ['trap', 'Traps'],
   ];
   const TOPICS = VOCAB.concat(GRAMMAR);
   // Which rule cards to show beside each grammar drill (ids of the cards on the Rules page).
-  const RULE_OF = { sent: ['agree', 'before'], phrase: ['before', 'agree'], place: ['before'], bel: ['bel'], de: ['de'], hair: ['hair'], gender: ['gender'] };
+  const RULE_OF = { sent: ['agree', 'before'], phrase: ['before', 'agree'], place: ['before'], bel: ['bel'], de: ['de'], hair: ['hair'], gender: ['gender'], trap: ['colors', 'hair'] };
 
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
   // focus: word ids to drill (trouble words); falls back to every word when none fit the question.
@@ -277,6 +277,7 @@
     ['fempl', 'IV', 'Mettez ces mots au féminin pluriel', 'Give the feminine plural (if it can change).', 10],
     ['trad', 'V', 'Traduction', 'Translate into French.', 5],
     ['gender', 'VI', 'Le genre des noms', 'Write un or une. Each of these is l’… with “the”, which hides the gender.', 6],
+    ['trap', 'VII', 'Les pièges', 'Traps: hair colour or colour? les cheveux? bel or beaux? Fill in the blank.', 8],
   ];
   const sayIt = (art, form, noun, pl, before) => (pl ? 'Ce sont ' : "C'est ") + art + ' ' + (before ? form + ' ' + noun : noun + ' ' + form) + '.';
   const kind = (n, pl) => n.sg + ' is ' + (n.g === 'f' ? 'feminine' : 'masculine') + (pl ? ' plural' : ' singular');
@@ -307,7 +308,58 @@
   const CALME = { id: 'calme', f: ['calme', 'calme', 'calmes', 'calmes'] }; // only ever the given word, opposite of nerveux
   const OPP = [['beau', 'laid'], ['jeune', 'vieux'], ['petit', 'grand'], ['heureux', 'malheureux'], ['calme', 'nerveux'],
     ['agréable', 'désagréable'], ['poli', 'impoli'], ['patient', 'impatient'], ['optimiste', 'pessimiste']];
+  // Traps: the mistakes the class sheet is built to catch, as fill-in-the-blanks.
+  const CHEVEUX = 'Les cheveux is always masculine plural, whoever has the hair: ';
+  const HAIRCOL = 'Hair colour is not colour: brown hair is châtain, a brown thing is marron. brun / châtain / blond / roux are only for hair and people.';
+  const hairCue = (a) => (a.hair && a.id !== 'raide' ? a.en[0].replace('-haired', '') : a.en[0]);
+  // Black hair can be noirs or bruns.
+  const hairAns = (a) => (a.id === 'noir' || a.id === 'brun' ? [a.f[2], a.id === 'noir' ? 'bruns' : 'noirs'] : [a.f[2]]);
+  const EN_WHO = { Elle: 'She has', Marie: 'Marie has', Sophie: 'Sophie has', 'Ma sœur': 'My sister has', Elles: 'They have' };
+  const TRAPS = [
+    () => { // a brown thing: marron, never châtain / brun
+      const n = pick(NOUNS.filter((x) => x.k !== 'p')), pl = Math.random() < 0.5;
+      return { show: cap(theNoun(n, pl)) + (pl ? ' sont' : ' est') + ' ___ (brown).', ans: ['marron'], word: 'marron', hint: 'Is it hair or a thing?',
+        why: 'A brown thing is marron, and marron never changes. ' + HAIRCOL, en: 'The ' + (pl ? n.enp + ' are' : n.en + ' is') + ' brown.' };
+    },
+    () => { // brown hair: châtains, never marron
+      const sj = pick(Object.keys(EN_SUBJ)), v = { Il: 'a', Elle: 'a', Ils: 'ont', Elles: 'ont' }[sj];
+      return { show: sj + ' ' + v + ' les cheveux ___ (brown).', ans: ['châtains'], word: 'châtain', hint: 'Is it hair or a thing?',
+        why: 'Brown hair is châtain, not marron (marron is for things). ' + CHEVEUX + 'châtains.', en: EN_SUBJ[sj][1] + ' brown hair.' };
+    },
+    () => { // a girl's hair still takes masculine plural
+      const who = pick(Object.keys(EN_WHO)), v = who === 'Elles' ? 'ont' : 'a';
+      const a = byId[pick(['long', 'court', 'blond', 'roux', 'raide', 'noir', 'brun'])];
+      return { show: who + ' ' + v + ' les cheveux ___ (' + hairCue(a) + ').', ans: hairAns(a), word: a.id, hint: 'Who does it describe: the person, or les cheveux?',
+        why: 'It describes the hair, not ' + (who === 'Ma sœur' ? 'ma sœur' : who === 'Elle' || who === 'Elles' ? who.toLowerCase() : who) + '. ' + CHEVEUX + a.f[2] + ' (not ' + a.f[3] + ').', en: EN_WHO[who] + ' ' + hairCue(a) + ' hair.' };
+    },
+    () => { // the person: agrees with the person
+      const a = byId[pick(['brun', 'châtain', 'blond', 'roux'])], slot = Math.floor(Math.random() * 4);
+      const who = [pick(NAMES.m), pick(NAMES.f), 'Paul et Léo', 'Marie et Anne'][slot];
+      return { show: who + (slot > 1 ? ' sont' : ' est') + ' ___ (' + a.en[0] + ').', ans: [a.f[slot]], word: a.id, hint: 'Who does it describe: the person, or les cheveux?',
+        why: 'Now it describes the person, so it agrees with ' + who + ': ' + SLOT[slot] + ', ' + a.f[slot] + '.' + (a.note ? ' ' + a.note : ''), en: who + (slot > 1 ? ' are ' : ' is ') + a.en[0] + '.' };
+    },
+    () => { // "my hair" is plural: mes cheveux sont…
+      const a = byId[pick(['long', 'court', 'noir', 'châtain', 'blond', 'roux', 'raide'])];
+      return { show: 'Mes cheveux ___ ' + a.f[2] + '.', ans: ['sont'], word: a.id, hint: 'cheveux is plural.',
+        why: 'Hair is plural in French: mes cheveux sont (not mon cheveu est). ' + CHEVEUX + a.f[2] + '.', en: 'My hair is ' + hairCue(a) + '.' };
+    },
+    () => { // bel / nouvel / vieil are singular only
+      const a = byId[pick(['beau', 'nouveau', 'vieux'])], n = pick(NOUNS.filter((x) => x.v && x.g === 'm' && fits(a, x))), pl = Math.random() < 0.5;
+      const p = phrase(a, n, pl);
+      return { show: p.art + ' ___ ' + (pl ? n.pl : n.sg) + ' (' + a.en[0] + ')', ans: [p.form], word: a.id, hint: 'Singular or plural? Does the noun start with a vowel?', en: p.en,
+        why: pl ? 'Plural: ' + p.form + ', not ' + a.alt + 's. ' + a.alt + ' is only masculine singular, before a vowel.' : n.sg + ' starts with a vowel or silent h: ' + a.alt + ', not ' + a.f[0] + '.' };
+    },
+    () => { // marron in the plural
+      const n = pick(NOUNS.filter((x) => x.k === 'a' || x.k === 't'));
+      return { show: 'des ' + n.pl + ' ___ (brown)', ans: ['marron'], word: 'marron', hint: 'Does marron ever change?', why: 'marron never changes, not even in the plural: des ' + n.pl + ' marron.', en: 'brown ' + n.enp };
+    },
+  ];
   Object.assign(Q, {
+    trap() {
+      const t = pick(TRAPS)();
+      return { topic: 'trap', word: t.word, ask: 'Fill in the blank', show: t.show, showLang: 'fr', lang: 'fr', answers: t.ans, why: t.why, hint: t.hint,
+        full: t.show.replace('___', t.ans[0]).replace(/ \([^)]*\)/, ''), en: t.en };
+    },
     gender() {
       const n = pick(LNOUNS), art = n.g === 'f' ? 'une' : 'un';
       return { topic: 'gender', word: n.w, ask: 'un or une?', show: "l'" + n.w, showLang: 'fr', sub: n.en, choices: ['un', 'une'], answers: [art, art + ' ' + n.w],

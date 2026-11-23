@@ -447,7 +447,7 @@ window.addEventListener('hashchange', () => go(location.hash.slice(1)));
 window.addEventListener('keydown', (e) => { if (keyHandler && !e.metaKey && !e.ctrlKey && !e.altKey) keyHandler(e); });
 
 /* ---------- one question card ---------- */
-const KIND = { 'fr-en': 'French → English', 'en-fr': 'English → French', forms: 'One form', all: 'All forms', sent: 'Sentence', phrase: 'Phrase', place: 'Word order', bel: 'bel · nouvel · vieil', de: 'de or des', hair: 'Hair', gender: 'Noun gender' };
+const KIND = { 'fr-en': 'French → English', 'en-fr': 'English → French', forms: 'One form', all: 'All forms', sent: 'Sentence', phrase: 'Phrase', place: 'Word order', bel: 'bel · nouvel · vieil', de: 'de or des', hair: 'Hair', gender: 'Noun gender', trap: 'Trap' };
 const SHORT = { 'masculine singular': 'masc.', 'feminine singular': 'fem.', 'masculine plural': 'masc. pl.', 'feminine plural': 'fem. pl.', 'before a vowel': 'before a vowel' };
 const textInput = (lang, id, extra) => h('input.answer' + (lang === 'fr' ? '.fr' : ''), { type: 'text', id, autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', lang, ...extra });
 // Accent buttons type into whichever box was last focused.
@@ -877,7 +877,9 @@ function Sheet() {
   return h('div', null,
     h('h1', null, 'Quiz'),
     h('p.lede', null, 'A quiz like the class handouts, with new questions every time. Press Enter to check each answer as you go, or fill them all in and check at the end: mistakes show the right answer and the rule.'),
-    picker, bar, h('div.stack', null, parts), h('div.row', { style: 'margin-top:1.2rem' }, checkBtn));
+    picker,
+    h('div.note-box', null, h('b', null, 'Remember. '), REMIND.hair[1], ' ', REMIND.colors[1]),
+    bar, h('div.stack', null, parts), h('div.row', { style: 'margin-top:1.2rem' }, checkBtn));
 }
 
 /* ---------- rules ---------- */
@@ -906,6 +908,17 @@ const RULES = {
   de: () => card('de, not des',
     h('p', null, 'When a plural adjective comes before the noun, use ', h('b', null, 'de'), ' instead of ', h('b', null, 'des'), '.'),
     ex([['new friends', 'de nouveaux amis'], ['nice friends', 'des amis sympathiques'], ['beautiful high schools', 'de beaux lycées']])),
+  colors: () => card('Hair colour ≠ colour',
+    h('p', null, 'brun, châtain, blond, roux are ', h('b', null, 'only for hair and people'), '. For things, use the colour words.'),
+    h('div.scroll', null, h('table', null,
+      h('thead', null, h('tr', null, ['', 'Hair', 'A person', 'A thing'].map((t) => h('th', null, t)))),
+      h('tbody', null, [
+        ['brown', 'les cheveux châtains', 'Elle est châtain.', 'une chaise marron'],
+        ['black / dark', 'les cheveux noirs / bruns', 'Il est brun. Elle est brune.', 'un chat noir'],
+        ['blond', 'les cheveux blonds', 'Elle est blonde.', '–'],
+        ['red', 'les cheveux roux', 'Il est roux. Elle est rousse.', '–'],
+      ].map(([c, ...r]) => h('tr', null, h('td', null, h('b', null, c)), r.map((x) => h('td.fr', { lang: 'fr' }, x))))))),
+    h('p.note', null, 'Trap from the sheet: “Les chaises sont châtains” is wrong. Chairs are things: les chaises sont marron (marron never changes).')),
   gender: () => card('l’ hides the gender',
     h('p', null, 'With “the”, a noun starting with a vowel or silent h is just l’: l’école, l’oiseau. Learn each one with ', h('b', null, 'un / une'), ' instead.'),
     ['m', 'f'].map((g) => h('p', null, h('b', null, g === 'm' ? 'un ' : 'une '), h('span.fr', { lang: 'fr' }, LNOUNS.filter((n) => n.g === g).map((n) => n.w).join(', ')))),
@@ -922,10 +935,11 @@ const REMIND = {
   de: ['de, not des', 'A plural adjective before the noun takes de: de nouveaux amis, but des amis sympathiques.'],
   bel: ['bel, nouvel, vieil', 'Masculine singular before a vowel or silent h: un bel homme, un nouvel ami, un vieil oiseau.'],
   agree: ['Agreement', '+e for feminine, +s for plural. Already ends in -e: no extra -e. -s / -x words add no -s. -ien → -ienne. Marron never changes.'],
-  hair: ['Hair', 'Les cheveux is masculine plural, even for a girl: elle a les cheveux bruns.'],
+  hair: ['Les cheveux', 'Les cheveux is masculine plural, even for a girl: elle a les cheveux longs (not longues). My hair is… = mes cheveux sont… (never mon cheveu est).'],
+  colors: ['Hair colour ≠ colour', 'Brown hair = châtain (les cheveux châtains); a brown thing = marron (une chaise marron). brun / châtain / blond / roux are only for hair and people.'],
   gender: ['l’ hides the gender', 'Learn l’ nouns with un / une: un homme, un oiseau, un appartement, une école, une histoire.'],
 };
-const REMIND_OF = { sent: ['agree', 'before'], phrase: ['before', 'de', 'bel'], place: ['before'], bel: ['bel'], de: ['de'], hair: ['hair'], gender: ['gender'] };
+const REMIND_OF = { sent: ['agree', 'before'], phrase: ['before', 'de', 'bel'], place: ['before'], bel: ['bel'], de: ['de'], hair: ['hair', 'colors'], gender: ['gender'], trap: ['hair', 'colors'] };
 function remindFor(q) {
   const a = byId[q.word];
   const keys = REMIND_OF[q.topic] || (a && a.before ? (a.alt && q.topic === 'all' ? ['bel'] : ['before']) : []);
