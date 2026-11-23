@@ -29,7 +29,7 @@ assert.equal(check({ lang: 'en', answers: ['black-haired'] }, 'black haired').ok
 assert.equal(check({ lang: 'en', answers: ['small'] }, 'a small').ok, true);
 
 // Every topic, many times: each question has an answer, and the answer passes its own check.
-for (const [t] of TOPICS) for (let i = 0; i < 400; i++) {
+for (const [t] of TOPICS.concat(FR.SHEET)) for (let i = 0; i < 400; i++) {
   const x = Q[t]();
   assert.ok(x.answers.length && x.answers.every(Boolean), t);
   if (x.choices) assert.ok(x.choices.includes(x.answers[0]), t);
@@ -71,5 +71,15 @@ assert.ok(FR.GRAMMAR.every(([t]) => FR.RULE_OF[t]));
 const all = FR.question(['all'], ['vieux']);
 assert.deepEqual(all.cells.map((c) => c.answers[0]), ['vieux', 'vieille', 'vieux', 'vieilles', 'vieil']);
 assert.equal(FR.question(['all'], ['bleu']).cells.length, 4);
+
+// Practice sheet: the worksheet's own answers come out of the generators.
+const seen = (t, re, n = 3000) => { for (let i = 0; i < n; i++) if (re.test(FR.question([t]).answers[0])) return true; return false; };
+assert.ok(seen('two', /^C'est une petite fille rousse\.$/, 20000));
+assert.ok(seen('two', /^Ce sont de jeunes filles intellectuelles\.$/, 20000));
+assert.ok(seen('fix', /^Ce sont de bons /));
+assert.ok(seen('opp', /^longs$/));
+for (let i = 0; i < 500; i++) { const x = Q.two(); assert.ok(!/ des [a-zé]+ (jeune|beau|bon|petit|grand|gros|joli|long|mauvais|nouveau|vieux)/.test(x.answers[0]), x.answers[0]); }
+assert.equal(check({ lang: 'fr', answers: ["C'est un livre court.", 'correct'] }, 'Correct').ok, true);
+assert.equal(FR.question(['fempl'], ['marron']).answers[0], 'marron');
 
 console.log('ok');

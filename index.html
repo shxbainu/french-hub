@@ -216,6 +216,13 @@ td.fr { font-size: 1.25rem; }
 .note { color: rgb(var(--muted)); font-size: 0.92rem; }
 
 /* grammar: the drill with its rule beside it */
+.sheet-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(24rem, 1fr)); gap: 1.2rem 2.5rem; margin: 0.8rem 0 0; padding-left: 1.6rem; }
+.sheet-list li::marker { font-weight: 700; color: rgb(var(--muted)); }
+.sheet-list .fr { font: 600 1.45rem/1.3 'Cormorant Garamond', Georgia, serif; margin-bottom: 0.4rem; }
+.sheet-list .en-q { font-weight: 600; margin-bottom: 0.4rem; }
+.sheet-list .gold { font-size: 1.5rem; }
+.sheet-bar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: 0.6rem 1rem; align-items: center; justify-content: space-between; padding: 0.6rem 0; margin-bottom: 1rem; background: rgb(var(--bg)); }
+.sheet-bar .keys { margin: 0; }
 .with-help { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(20rem, 1fr); gap: 1.5rem; align-items: start; }
 .help { position: sticky; top: 1.25rem; max-height: calc(100vh - 2.5rem); overflow-y: auto; }
 .help .panel { background: rgb(var(--sunken) / 0.6); }
@@ -260,7 +267,7 @@ td.fr { font-size: 1.25rem; }
 </div>
 <script src="french.js?v=dev"></script>
 <script>
-const { ADJ, LESSONS, GROUPS, BEFORE, GRAMMAR, RULE_OF, question, check, review, DAY, MIN } = window.FR;
+const { SHEET, ADJ, LESSONS, GROUPS, BEFORE, GRAMMAR, RULE_OF, question, check, review, DAY, MIN } = window.FR;
 const byId = window.FR.byId;
 const $main = document.getElementById('main');
 
@@ -409,9 +416,9 @@ function grammarAcc() {
 }
 
 /* ---------- navigation ---------- */
-const PAGES = { home: Home, vocab: Vocab, grammar: Grammar, rules: Rules };
+const PAGES = { home: Home, vocab: Vocab, grammar: Grammar, sheet: Sheet, rules: Rules };
 const OLD = { practice: 'grammar', words: 'vocab' };
-const NAV = [['home', 'Dashboard'], ['vocab', 'Vocab'], ['grammar', 'Grammar'], ['rules', 'Rules']];
+const NAV = [['home', 'Dashboard'], ['vocab', 'Vocab'], ['grammar', 'Grammar'], ['sheet', 'Practice'], ['rules', 'Rules']];
 let current = 'home', keyHandler = null, onPage = true; // onPage: a plain page, not a quiz in progress
 function renderNav() {
   const due = dueWords().length, g = grammarAcc(), l = ADJ.filter((a) => learned(a.id)).length;
@@ -814,6 +821,51 @@ function startGrammar(topics, len, words) {
   go('grammar', h('div.with-help', null, run, help));
 }
 
+/* ---------- practice sheet ---------- */
+// A worksheet like the class handouts: every part at once, type all the answers, then check the whole sheet.
+function Sheet() {
+  const items = [];
+  let done = false;
+  const score = h('span.muted');
+  const parts = SHEET.map(([t, num, title, help, count]) => {
+    const qs = [];
+    for (let k = 0; qs.length < count && k < 50; k++) { const q = question([t]); if (!qs.some((x) => x.show === q.show)) qs.push(q); }
+    return h('section.panel', null, h('h2', null, num + ' · ', h('span', { lang: 'fr' }, title)), h('p.note', null, help),
+      h('ol.sheet-list', null, qs.map((q) => {
+        const inp = textInput('fr', 'sh' + items.length, { 'aria-label': q.show });
+        const out = h('div.sheet-out');
+        items.push({ q, inp, out });
+        return h('li', null, h('div.' + (q.showLang === 'fr' ? 'fr' : 'en-q'), { lang: q.showLang }, q.show), inp, out);
+      })));
+  });
+  // Enter moves down the sheet; Enter in the last box checks it.
+  items.forEach(({ inp }, i) => inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); if (items[i + 1]) items[i + 1].inp.focus(); else grade(); } }));
+  function grade() {
+    if (done) return;
+    done = true;
+    let right = 0;
+    items.forEach(({ q, inp, out }) => {
+      const r = check(q, inp.value);
+      inp.readOnly = true; inp.classList.add(r.ok ? 'ok' : 'no');
+      record(q, r.ok);
+      if (r.ok) right++;
+      else out.replaceChildren(diff(q.answers[0], inp.value, false), h('p.note', null, r.accent ? h('b', null, 'Accent missing. ') : null, q.why));
+    });
+    score.textContent = right + ' / ' + items.length + ' right';
+    checkBtn.hidden = true; renderNav();
+    const first = items.find((x) => x.inp.classList.contains('no'));
+    (first ? first.inp : score).scrollIntoView({ behavior: still() ? 'auto' : 'smooth', block: 'center' });
+  }
+  const checkBtn = h('button.btn.primary', { type: 'button', onclick: grade }, 'Check the sheet');
+  const bar = h('div.sheet-bar', null, accentKeys(), h('div.row', null, score, h('button.btn', { type: 'button', onclick: () => go('sheet') }, 'New sheet')));
+  parts.forEach((c, i) => fadeUp(c, 50 * i));
+  setTimeout(() => items[0] && items[0].inp.focus(), 60);
+  return h('div', null,
+    h('h1', null, 'Practice'),
+    h('p.lede', null, 'A practice sheet like the class handouts, with new questions every time. Fill in every answer, then check the whole sheet: mistakes show the right answer and the rule.'),
+    bar, h('div.stack', null, parts), h('div.row', { style: 'margin-top:1.2rem' }, checkBtn));
+}
+
 /* ---------- rules ---------- */
 const ex = (pairs) => h('div.ex', null, pairs.flatMap(([en, fr]) => [h('div.en-ex.muted', null, en), h('div.fr', { lang: 'fr' }, fr)]));
 const card = (title, ...kids) => h('section.panel', null, h('h2', null, title), ...kids);
@@ -894,6 +946,7 @@ function Home() {
           h('div.actions', null,
             due.length ? act('Review ' + Math.min(20, due.length) + ' due words', () => go('vocab', Review(due.slice(0, 20).map((a) => a.id), true)), true) : null,
             fresh.length ? act('Learn the next ' + Math.min(5, fresh.length) + ' words', () => go('vocab', Learn(fresh.slice(0, 5).map((a) => a.id))), !due.length) : null,
+            act('Practice sheet', () => go('sheet')),
             nextG ? act((untried ? 'Grammar, try: ' : 'Grammar, weakest: ') + nextG[1], () => startGrammar([nextG[0]], 10)) : null,
             tr.length ? act('Practise trouble words (' + tr.length + ')', () => go('vocab', Review(tr.map((a) => a.id), false))) : null),
           tr.length ? h('div.words', { lang: 'fr' }, tr.map((a) => h('span', null, a.id))) : null),

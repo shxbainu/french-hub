@@ -213,6 +213,88 @@
         full: subj[0] + ' ' + verb + ' les cheveux ' + a.f[2] + '.', en: EN_SUBJ[subj[0]][1] + ' ' + a.en[0].replace('-haired', '') + ' hair.', hint: HINT.hair };
     },
   };
+  // Practice sheet: the class worksheet's parts (fix the mistake, two adjectives, opposites, feminine plural, translation).
+  // [topic, numeral, French heading, English instruction, how many]. Not in TOPICS, so the Grammar page stays as it is.
+  const SHEET = [
+    ['fix', 'I', 'Corrigez la faute si c’est nécessaire', 'Write the sentence correctly. If it’s already right, copy it or type “correct”.', 6],
+    ['two', 'II', 'Place des adjectifs', 'Rewrite it with both adjectives, each in the right place and form.', 6],
+    ['opp', 'III', 'Les contraires', 'Write the opposite adjective, agreeing with who it describes.', 6],
+    ['fempl', 'IV', 'Mettez ces mots au féminin pluriel', 'Give the feminine plural (if it can change).', 10],
+    ['trad', 'V', 'Traduction', 'Translate into French.', 5],
+  ];
+  const sayIt = (art, form, noun, pl, before) => (pl ? 'Ce sont ' : "C'est ") + art + ' ' + (before ? form + ' ' + noun : noun + ' ' + form) + '.';
+  const kind = (n, pl) => n.sg + ' is ' + (n.g === 'f' ? 'feminine' : 'masculine') + (pl ? ' plural' : ' singular');
+  // Two adjectives on one noun: the BAGS one (at most one) goes before, the rest after, joined by et.
+  function twoAdj() {
+    const n = pick(NOUNS), pl = Math.random() < 0.4, slot = slotOf(n.g, pl), noun = pl ? n.pl : n.sg;
+    const fit = ADJ.filter((x) => x.id !== 'raide' && fitsPred(x, n));
+    let a, b;
+    do { a = pick(fit); b = pick(fit); } while (a === b || (a.before && b.before) || (a.hair && b.hair));
+    const bef = [a, b].find((x) => x.before), aft = [a, b].filter((x) => !x.before);
+    const art = pl ? (bef ? 'de' : 'des') : n.g === 'f' ? 'une' : 'un';
+    const fr = (pl ? 'Ce sont ' : "C'est ") + art + ' ' + (bef ? formFor(bef, n, pl) + ' ' : '') + noun + ' ' + aft.map((x) => x.f[slot]).join(' et ') + '.';
+    const bits = [kind(n, pl) + '.', bef ? bef.id + ' goes before the noun; ' + aft[0].id + ' goes after.' : 'Neither is one of the 11, so both go after, joined by et.'];
+    if (bef && bef.alt && formFor(bef, n, pl) === bef.alt) bits.push(bef.alt + ' before a vowel or silent h.');
+    if (pl && bef) bits.push('Plural adjective before the noun: de, not des.');
+    const en = (pl ? 'They are ' : "It's " + (/^[aeiou]/.test(a.en[0]) ? 'an ' : 'a ')) + a.en[0] + ', ' + b.en[0] + ' ' + (pl ? n.enp : n.en) + '.';
+    return { a, b, n, pl, noun, fr, en, why: bits.join(' ') };
+  }
+  const NAMES = { m: ['Paul', 'Thomas', 'Léo', 'Martin', 'Albert', 'John'], f: ['Marie', 'Sophie', 'Chloé', 'Nicole', 'Anne', 'Élodie'] };
+  // A person or a pair: slot 0-3 as in SLOT. A boy and a girl together count as masculine plural.
+  function who(avoid) {
+    const slot = Math.floor(Math.random() * 4), m = NAMES.m.filter((x) => !avoid.includes(x)), f = NAMES.f.filter((x) => !avoid.includes(x));
+    const m1 = pick(m), m2 = pick(m.filter((x) => x !== m1)), f1 = pick(f), f2 = pick(f.filter((x) => x !== f1));
+    const mixed = slot === 2 && Math.random() < 0.5;
+    const name = [m1, f1, mixed ? m1 + ' et ' + f1 : m1 + ' et ' + m2, f1 + ' et ' + f2][slot];
+    return { slot, name, mixed, verb: slot > 1 ? ' sont ' : ' est ' };
+  }
+  const CALME = { id: 'calme', f: ['calme', 'calme', 'calmes', 'calmes'] }; // only ever the given word, opposite of nerveux
+  const OPP = [['beau', 'laid'], ['jeune', 'vieux'], ['petit', 'grand'], ['heureux', 'malheureux'], ['calme', 'nerveux']];
+  Object.assign(Q, {
+    fix() {
+      const a = pick(pool((x) => x.on)), n = pick(NOUNS.filter((x) => fits(a, x))), pl = Math.random() < 0.45;
+      const p = phrase(a, n, pl), noun = pl ? n.pl : n.sg, right = sayIt(p.art, p.form, noun, pl, a.before);
+      const base = { topic: 'fix', word: a.id, ask: 'Correct the mistake, if there is one', showLang: 'fr', lang: 'fr', hint: HINT.phrase, full: right, en: (pl ? 'They are ' : "It's ") + p.en + '.' };
+      if (Math.random() < 0.3) return { ...base, show: right, answers: [right, 'correct'], why: 'No mistake. ' + whyPlace(a) };
+      const errs = [[sayIt(p.art, p.form, noun, pl, !a.before), whyPlace(a)]];
+      const wrong = [...new Set(a.f.concat(a.alt || []))].filter((f) => f !== p.form);
+      if (wrong.length) errs.push([sayIt(p.art, pick(wrong), noun, pl, a.before), 'Agreement: ' + kind(n, pl) + ', so ' + p.form + '.']);
+      if (pl && a.before) errs.push([sayIt('des', p.form, noun, pl, true), 'Plural adjective before the noun: de, not des.']);
+      if (p.form === a.alt) errs.push([sayIt(p.art, a.f[0], noun, pl, true), n.sg + ' starts with a vowel or silent h, so ' + a.alt + ', not ' + a.f[0] + '.']);
+      const [show, why] = pick(errs);
+      return { ...base, show, answers: [right], why };
+    },
+    two() {
+      const t = twoAdj();
+      const show = (t.pl ? 'Ce sont des ' : "C'est " + (t.n.g === 'f' ? 'une ' : 'un ')) + t.noun + ' (' + t.a.en[0] + ', ' + t.b.en[0] + ')';
+      return { topic: 'two', word: t.a.id, ask: 'Add both adjectives', show, showLang: 'fr', lang: 'fr', answers: [t.fr], why: t.why, full: t.fr, en: t.en, hint: 'Which one is BAGS (goes before)? The other goes after.' };
+    },
+    opp() {
+      if (Math.random() < 0.2) {
+        const [x, y] = pick([['court', 'long'], ['long', 'court']]).map((id) => byId[id]);
+        return { topic: 'opp', word: y.id, ask: 'The opposite', show: 'Mes cheveux ne sont pas ' + x.f[2] + ', ils sont …', showLang: 'fr', lang: 'fr', answers: [y.f[2]],
+          why: 'The opposite of ' + x.id + ' is ' + y.id + '. Les cheveux is masculine plural: ' + y.f[2] + '.', hint: 'Les cheveux: masculine plural.' };
+      }
+      let [x, y] = pick(OPP);
+      if (x !== 'calme' && Math.random() < 0.5) [x, y] = [y, x];
+      const X = byId[x] || CALME, Y = byId[y], s1 = who([]), s2 = who(s1.name.split(' et '));
+      return { topic: 'opp', word: Y.id, ask: 'The opposite', show: s1.name + s1.verb + X.f[s1.slot] + ', mais ' + s2.name + s2.verb + '…', showLang: 'fr', lang: 'fr', answers: [Y.f[s2.slot]],
+        why: 'The opposite of ' + X.id + ' is ' + Y.id + '. ' + s2.name + (s2.mixed ? ' (a mixed group counts as masculine)' : '') + ': ' + SLOT[s2.slot] + ', so ' + Y.f[s2.slot] + '.', hint: 'Opposite first, then make it agree with ' + s2.name + '.' };
+    },
+    fempl() {
+      const a = pick(pool());
+      return { topic: 'fempl', word: a.id, ask: 'Feminine plural', show: a.f[0], showLang: 'fr', lang: 'fr', answers: [a.f[3]], why: whyForm(a), hint: startsWith(a.f[3]) };
+    },
+    trad() {
+      const r = Math.random();
+      if (r < 0.4) return { ...Q.sent(), topic: 'trad' };
+      if (r < 0.7) { const t = twoAdj(); return { topic: 'trad', word: t.a.id, ask: 'In French', show: t.en, showLang: 'en', lang: 'fr', answers: [t.fr], why: t.why, hint: 'C’est / Ce sont… Which adjective goes before?' }; }
+      const subj = pick(Object.keys(EN_SUBJ)), verb = { Il: 'a', Elle: 'a', Ils: 'ont', Elles: 'ont' }[subj];
+      const len = byId[pick(['court', 'long'])], col = byId[pick(['brun', 'châtain', 'blond', 'roux'])];
+      return { topic: 'trad', word: col.id, ask: 'In French', show: EN_SUBJ[subj][1] + ' ' + len.en[0] + ', ' + col.en[0].replace('-haired', '') + ' hair.', showLang: 'en', lang: 'fr',
+        answers: [subj + ' ' + verb + ' les cheveux ' + len.f[2] + ' et ' + col.f[2] + '.'], why: 'Les cheveux is always masculine plural: ' + len.f[2] + ', ' + col.f[2] + '. Both go after, joined by et.', hint: HINT.hair };
+    },
+  });
   function question(topics, words) { focus = words || []; return Q[pick(topics)](); }
 
   // Answer checking: case, spacing and apostrophes don't matter. In French, accents do: "fiere" for "fière" is wrong,
@@ -265,7 +347,7 @@
     return c;
   }
 
-  const api = { ADJ, LESSONS, GROUPS, SLOT, BEFORE, NOUNS, TOPICS, VOCAB, GRAMMAR, RULE_OF, Q, review, retrievability, DAY, MIN, question, check, phrase, formFor, byId };
+  const api = { SHEET, ADJ, LESSONS, GROUPS, SLOT, BEFORE, NOUNS, TOPICS, VOCAB, GRAMMAR, RULE_OF, Q, review, retrievability, DAY, MIN, question, check, phrase, formFor, byId };
   if (typeof module !== 'undefined') module.exports = api;
   else window.FR = api;
 })();
