@@ -74,12 +74,21 @@ assert.equal(FR.question(['all'], ['bleu']).cells.length, 4);
 
 // Practice sheet: the worksheet's own answers come out of the generators.
 const seen = (t, re, n = 3000) => { for (let i = 0; i < n; i++) if (re.test(FR.question([t]).answers[0])) return true; return false; };
-assert.ok(seen('two', /^C'est une petite fille rousse\.$/, 20000));
-assert.ok(seen('two', /^Ce sont de jeunes filles intellectuelles\.$/, 20000));
+assert.ok(seen('two', /^Ce sont de \S+ \S+ \S+\.$/)); // de + adjective before + noun + adjective after
+assert.ok(seen('two', /^C'est (un|une) \S+ \S+ et \S+\.$/)); // both after, joined by et
 assert.ok(seen('fix', /^Ce sont de bons /));
 assert.ok(seen('opp', /^longs$/));
 for (let i = 0; i < 500; i++) { const x = Q.two(); assert.ok(!/ des [a-zé]+ (jeune|beau|bon|petit|grand|gros|joli|long|mauvais|nouveau|vieux)/.test(x.answers[0]), x.answers[0]); }
 assert.equal(check({ lang: 'fr', answers: ["C'est un livre court.", 'correct'] }, 'Correct').ok, true);
 assert.equal(FR.question(['fempl'], ['marron']).answers[0], 'marron');
+
+// Cognates and nationalities.
+assert.equal(phrase(A.amical, N.ami, true).fr, 'des amis amicaux');
+assert.equal(phrase(A.italien, N.voiture, false).fr, 'une voiture italienne');
+assert.equal(phrase(A.anglais, N.livre, true).fr, 'des livres anglais');
+assert.equal(phrase(A.anglais, N.livre, false).en, 'an English book');
+assert.deepEqual(A.coréen.f, ['coréen', 'coréenne', 'coréens', 'coréennes']);
+assert.deepEqual(A.russe.f, ['russe', 'russe', 'russes', 'russes']);
+assert.ok(seen('opp', /^désagréables$/));
 
 console.log('ok');

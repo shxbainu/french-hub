@@ -873,7 +873,7 @@ const RULES = {
   agree: () => card('Agreement',
     h('p', null, 'Adjectives match the noun: add ', h('b', null, '-e'), ' for feminine, ', h('b', null, '-s'), ' for plural.'),
     ex([['a green bird', 'un oiseau vert'], ['a green house', 'une maison verte'], ['green birds', 'des oiseaux verts'], ['The houses are green.', 'Les maisons sont vertes.']]),
-    h('p.note', null, 'Already ends in -e (jeune, raide): no extra -e. Marron never changes. Before a vowel, le / la become l’: l’ami, l’histoire.')),
+    h('p.note', null, 'Already ends in -e (jeune, raide): no extra -e. Marron never changes. Ends in -s (anglais, japonais): no extra -s in the masculine plural. Nationalities are lower case: un livre anglais. Before a vowel, le / la become l’: l’ami, l’histoire.')),
   before: () => card('11 adjectives go before the noun',
     h('p.big', { lang: 'fr' }, BEFORE.map((w, i) => [i ? ' · ' : '', h('b', null, w[0].toUpperCase()), w.slice(1)])),
     h('p.note', null, 'Everything else goes after the noun.'),
@@ -882,7 +882,7 @@ const RULES = {
     h('div.scroll', null, h('table', null, h('tbody', null, [
       ['-eux → -euse', 'heureux, heureuse'], ['-el → -elle', 'intellectuel, intellectuelle'], ['-f → -ve', 'naïf, naïve'],
       ['-er → -ère', 'fier, fière'], ['-on → -onne', 'bon, bonne'], ['-g → -gue', 'long, longue'], ['-s doubles', 'gros, grosse'],
-      ['-eau → -elle', 'beau, belle · nouveau, nouvelle'], ['others', 'vieux, vieille · roux, rousse'],
+      ['-eau → -elle', 'beau, belle · nouveau, nouvelle'], ['-en → -enne', 'italien, italienne · coréen, coréenne'], ['-al → -aux', 'amical, amicaux (fem. amicales)'], ['others', 'vieux, vieille · roux, rousse'],
     ].map(([p, e]) => h('tr', null, h('td', null, p), h('td.fr', { lang: 'fr' }, e)))))),
     h('p.note', null, 'Many English adjectives in -ous are -eux in French: curious → curieux, nervous → nerveux. -x words don’t add -s in the plural: heureux, gros, vieux.')),
   bel: () => card('bel, nouvel, vieil',
@@ -903,7 +903,7 @@ const REMIND = {
   before: ['Before the noun', 'BAGS (beauty, age, goodness, size) go before the noun: ' + BEFORE.join(', ') + '. Everything else goes after.'],
   de: ['de, not des', 'A plural adjective before the noun takes de: de nouveaux amis, but des amis sympathiques.'],
   bel: ['bel, nouvel, vieil', 'Masculine singular before a vowel or silent h: un bel homme, un nouvel ami, un vieil oiseau.'],
-  agree: ['Agreement', '+e for feminine, +s for plural. Already ends in -e: no extra -e. -x words add no -s. Marron never changes.'],
+  agree: ['Agreement', '+e for feminine, +s for plural. Already ends in -e: no extra -e. -s / -x words add no -s. -ien → -ienne. Marron never changes.'],
   hair: ['Hair', 'Les cheveux is masculine plural, even for a girl: elle a les cheveux bruns.'],
 };
 const REMIND_OF = { sent: ['agree', 'before'], phrase: ['before', 'de', 'bel'], place: ['before'], bel: ['bel'], de: ['de'], hair: ['hair'] };

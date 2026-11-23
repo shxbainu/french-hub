@@ -37,10 +37,38 @@
     // On the "11 adjectives that go before" list but not in the vocab list above.
     A('grand', ['grand', 'grande', 'grands', 'grandes'], ['big', 'tall', 'great'], 'bags', { before: true }),
     A('mauvais', ['mauvais', 'mauvaise', 'mauvais', 'mauvaises'], ['bad'], 'bags', { before: true }),
+
+    // Cognates: same or similar spelling and meaning in English. reg: +e / +s; same: already ends in -e.
+    ...[
+      ['agréable', 'same', ['pleasant'], 'pt'], ['amical', null, ['friendly'], 'pa'], ['amusant', 'reg', ['fun', 'funny', 'amusing'], 'pt'],
+      ['désagréable', 'same', ['unpleasant'], 'pt'], ['égoïste', 'same', ['selfish'], 'p'], ['élégant', 'reg', ['elegant'], 'pt'],
+      ['impatient', 'reg', ['impatient'], 'p'], ['impoli', 'reg', ['impolite', 'rude'], 'p'], ['indépendant', 'reg', ['independent'], 'p'],
+      ['intelligent', 'reg', ['intelligent', 'smart'], 'pa'], ['intéressant', 'reg', ['interesting'], 'pt'], ['occupé', 'reg', ['busy'], 'p'],
+      ['optimiste', 'same', ['optimistic'], 'p'], ['patient', 'reg', ['patient'], 'p'], ['pessimiste', 'same', ['pessimistic'], 'p'],
+      ['poli', 'reg', ['polite'], 'p'], ['réservé', 'reg', ['reserved'], 'p'], ['sincère', 'same', ['sincere'], 'p'],
+      ['sympathique', 'same', ['nice', 'likeable'], 'pa'],
+    ].map(([w, k, en, on]) => {
+      const f = k === 'reg' ? [w, w + 'e', w + 's', w + 'es'] : k === 'same' ? [w, w, w + 's', w + 's'] : ['amical', 'amicale', 'amicaux', 'amicales'];
+      const note = w === 'amical' ? '-al → -aux in the masculine plural: amicaux (but amicales).' : w === 'sympathique' ? 'Short form: sympa (plural sympas).' : k === 'same' ? 'Already ends in -e: same for masculine and feminine.' : undefined;
+      return A(w, f, en, 'cog', { on, note });
+    }),
+
+    // Nationalities: lower case in French. -ien → -ienne; -s words add no -s in the masculine plural.
+    ...[
+      ['allemand', ['German']], ['anglais', ['English']], ['chinois', ['Chinese']], ['coréen', ['Korean']], ['cubain', ['Cuban']],
+      ['espagnol', ['Spanish']], ['indien', ['Indian']], ['italien', ['Italian']], ['irlandais', ['Irish']], ['japonais', ['Japanese']],
+      ['martiniquais', ['Martinican', 'from Martinique']], ['mexicain', ['Mexican']], ['polonais', ['Polish']], ['portugais', ['Portuguese']],
+      ['québécois', ['Québécois', 'from Quebec']], ['russe', ['Russian']],
+    ].map(([w, en]) => {
+      const fem = w.endsWith('ien') || w.endsWith('éen') ? w + 'ne' : w === 'russe' ? w : w + 'e';
+      const f = [w, fem, w.endsWith('s') ? w : w + 's', fem + 's'];
+      const note = fem.endsWith('nne') ? '-en → -enne: add -ne for the feminine.' : w.endsWith('s') ? 'Ends in -s: no extra -s in the masculine plural.' : w === 'russe' ? 'Already ends in -e: same for masculine and feminine.' : undefined;
+      return A(w, f, en, 'nat', { note });
+    }),
   ];
   // One entry per handout. New lessons: add here and tag their words with lesson: '<id>'.
   const LESSONS = [{ id: '3A1', title: 'Leçon 3A1', sub: 'Les adjectifs descriptifs' }];
-  const GROUPS = { desc: 'Descriptive adjectives', irr: 'Irregular adjectives', bags: 'Also on the “before” list' };
+  const GROUPS = { desc: 'Descriptive adjectives', irr: 'Irregular adjectives', bags: 'Also on the “before” list', cog: 'Cognates', nat: 'Nationalities' };
   const SLOT = ['masculine singular', 'feminine singular', 'masculine plural', 'feminine plural'];
   const BEFORE = ['beau', 'bon', 'grand', 'gros', 'jeune', 'joli', 'long', 'mauvais', 'nouveau', 'petit', 'vieux'];
 
@@ -88,7 +116,7 @@
     const art = pl ? (a.before ? 'de' : 'des') : n.g === 'f' ? 'une' : 'un';
     const fr = art + ' ' + (a.before ? form + ' ' + noun : noun + ' ' + form);
     const enAdj = a.en[0], enNoun = pl ? n.enp : n.en;
-    const en = pl ? enAdj + ' ' + enNoun : (/^[aeiou]/.test(enAdj) ? 'an ' : 'a ') + enAdj + ' ' + enNoun;
+    const en = pl ? enAdj + ' ' + enNoun : (/^[aeiou]/i.test(enAdj) ? 'an ' : 'a ') + enAdj + ' ' + enNoun;
     return { fr, en, form, art };
   }
   const fits = (a, n) => a.on.includes(n.k);
@@ -229,14 +257,14 @@
     const n = pick(NOUNS), pl = Math.random() < 0.4, slot = slotOf(n.g, pl), noun = pl ? n.pl : n.sg;
     const fit = ADJ.filter((x) => x.id !== 'raide' && fitsPred(x, n));
     let a, b;
-    do { a = pick(fit); b = pick(fit); } while (a === b || (a.before && b.before) || (a.hair && b.hair));
+    do { a = pick(fit); b = pick(fit); } while (a === b || (a.before && b.before) || (a.hair && b.hair) || (a.group === 'nat' && b.group === 'nat'));
     const bef = [a, b].find((x) => x.before), aft = [a, b].filter((x) => !x.before);
     const art = pl ? (bef ? 'de' : 'des') : n.g === 'f' ? 'une' : 'un';
     const fr = (pl ? 'Ce sont ' : "C'est ") + art + ' ' + (bef ? formFor(bef, n, pl) + ' ' : '') + noun + ' ' + aft.map((x) => x.f[slot]).join(' et ') + '.';
     const bits = [kind(n, pl) + '.', bef ? bef.id + ' goes before the noun; ' + aft[0].id + ' goes after.' : 'Neither is one of the 11, so both go after, joined by et.'];
     if (bef && bef.alt && formFor(bef, n, pl) === bef.alt) bits.push(bef.alt + ' before a vowel or silent h.');
     if (pl && bef) bits.push('Plural adjective before the noun: de, not des.');
-    const en = (pl ? 'They are ' : "It's " + (/^[aeiou]/.test(a.en[0]) ? 'an ' : 'a ')) + a.en[0] + ', ' + b.en[0] + ' ' + (pl ? n.enp : n.en) + '.';
+    const en = (pl ? 'They are ' : "It's " + (/^[aeiou]/i.test(a.en[0]) ? 'an ' : 'a ')) + a.en[0] + ', ' + b.en[0] + ' ' + (pl ? n.enp : n.en) + '.';
     return { a, b, n, pl, noun, fr, en, why: bits.join(' ') };
   }
   const NAMES = { m: ['Paul', 'Thomas', 'Léo', 'Martin', 'Albert', 'John'], f: ['Marie', 'Sophie', 'Chloé', 'Nicole', 'Anne', 'Élodie'] };
@@ -249,7 +277,8 @@
     return { slot, name, mixed, verb: slot > 1 ? ' sont ' : ' est ' };
   }
   const CALME = { id: 'calme', f: ['calme', 'calme', 'calmes', 'calmes'] }; // only ever the given word, opposite of nerveux
-  const OPP = [['beau', 'laid'], ['jeune', 'vieux'], ['petit', 'grand'], ['heureux', 'malheureux'], ['calme', 'nerveux']];
+  const OPP = [['beau', 'laid'], ['jeune', 'vieux'], ['petit', 'grand'], ['heureux', 'malheureux'], ['calme', 'nerveux'],
+    ['agréable', 'désagréable'], ['poli', 'impoli'], ['patient', 'impatient'], ['optimiste', 'pessimiste']];
   Object.assign(Q, {
     fix() {
       const a = pick(pool((x) => x.on)), n = pick(NOUNS.filter((x) => fits(a, x))), pl = Math.random() < 0.45;
