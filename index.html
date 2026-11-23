@@ -223,6 +223,9 @@ td.fr { font-size: 1.25rem; }
 .sheet-list .gold { font-size: 1.5rem; }
 .sheet-bar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: 0.6rem 1rem; align-items: center; justify-content: space-between; padding: 0.6rem 0; margin-bottom: 1rem; background: rgb(var(--bg)); }
 .sheet-bar .keys { margin: 0; }
+.parts { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 0.5rem; }
+.parts button { border: 1px solid rgb(var(--line)); background: rgb(var(--surface)); border-radius: 999px; padding: 0.45rem 0.9rem; font-weight: 600; color: rgb(var(--muted)); }
+.parts button[aria-pressed="true"] { background: rgb(var(--accent-soft)); border-color: rgb(var(--accent) / 0.5); color: rgb(var(--accent)); }
 .with-help { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(20rem, 1fr); gap: 1.5rem; align-items: start; }
 .help { position: sticky; top: 1.25rem; max-height: calc(100vh - 2.5rem); overflow-y: auto; }
 .help .panel { background: rgb(var(--sunken) / 0.6); }
@@ -418,7 +421,7 @@ function grammarAcc() {
 /* ---------- navigation ---------- */
 const PAGES = { home: Home, vocab: Vocab, grammar: Grammar, sheet: Sheet, rules: Rules };
 const OLD = { practice: 'grammar', words: 'vocab' };
-const NAV = [['home', 'Dashboard'], ['vocab', 'Vocab'], ['grammar', 'Grammar'], ['sheet', 'Practice'], ['rules', 'Rules']];
+const NAV = [['home', 'Dashboard'], ['sheet', 'Quiz'], ['vocab', 'Vocab'], ['grammar', 'Grammar'], ['rules', 'Rules']];
 let current = 'home', keyHandler = null, onPage = true; // onPage: a plain page, not a quiz in progress
 function renderNav() {
   const due = dueWords().length, g = grammarAcc(), l = ADJ.filter((a) => learned(a.id)).length;
@@ -827,7 +830,12 @@ function Sheet() {
   const items = [];
   let done = false;
   const score = h('span.muted');
-  const parts = SHEET.map(([t, num, title, help, count]) => {
+  // Full quiz (every part) or one part on its own, twice as long.
+  const only = store.get('sheetPart', '');
+  const picker = h('div.parts', { role: 'group', 'aria-label': 'Which part' }, [['', 'Full quiz']].concat(SHEET.map(([t, num, title]) => [t, num + '. ' + title])).map(([t, label]) =>
+    h('button', { type: 'button', 'aria-pressed': String(t === only), lang: t ? 'fr' : null, onclick: () => { store.set('sheetPart', t); go('sheet'); } }, label)));
+  const parts = SHEET.filter(([t]) => !only || t === only).map(([t, num, title, help, n]) => {
+    const count = only ? n * 2 : n;
     const qs = [];
     for (let k = 0; qs.length < count && k < 50; k++) { const q = question([t]); if (!qs.some((x) => x.show === q.show)) qs.push(q); }
     return h('section.panel', null, h('h2', null, num + ' · ', h('span', { lang: 'fr' }, title)), h('p.note', null, help),
@@ -856,14 +864,14 @@ function Sheet() {
     const first = items.find((x) => x.inp.classList.contains('no'));
     (first ? first.inp : score).scrollIntoView({ behavior: still() ? 'auto' : 'smooth', block: 'center' });
   }
-  const checkBtn = h('button.btn.primary', { type: 'button', onclick: grade }, 'Check the sheet');
-  const bar = h('div.sheet-bar', null, accentKeys(), h('div.row', null, score, h('button.btn', { type: 'button', onclick: () => go('sheet') }, 'New sheet')));
+  const checkBtn = h('button.btn.primary', { type: 'button', onclick: grade }, 'Check my answers');
+  const bar = h('div.sheet-bar', null, accentKeys(), h('div.row', null, score, h('button.btn', { type: 'button', onclick: () => go('sheet') }, 'New quiz')));
   parts.forEach((c, i) => fadeUp(c, 50 * i));
   setTimeout(() => items[0] && items[0].inp.focus(), 60);
   return h('div', null,
-    h('h1', null, 'Practice'),
-    h('p.lede', null, 'A practice sheet like the class handouts, with new questions every time. Fill in every answer, then check the whole sheet: mistakes show the right answer and the rule.'),
-    bar, h('div.stack', null, parts), h('div.row', { style: 'margin-top:1.2rem' }, checkBtn));
+    h('h1', null, 'Quiz'),
+    h('p.lede', null, 'A quiz like the class handouts, with new questions every time. Fill in every answer, then check it: mistakes show the right answer and the rule.'),
+    picker, bar, h('div.stack', null, parts), h('div.row', { style: 'margin-top:1.2rem' }, checkBtn));
 }
 
 /* ---------- rules ---------- */
@@ -946,7 +954,7 @@ function Home() {
           h('div.actions', null,
             due.length ? act('Review ' + Math.min(20, due.length) + ' due words', () => go('vocab', Review(due.slice(0, 20).map((a) => a.id), true)), true) : null,
             fresh.length ? act('Learn the next ' + Math.min(5, fresh.length) + ' words', () => go('vocab', Learn(fresh.slice(0, 5).map((a) => a.id))), !due.length) : null,
-            act('Practice sheet', () => go('sheet')),
+            act('Take a quiz (like the class handouts)', () => go('sheet'), !due.length && !fresh.length),
             nextG ? act((untried ? 'Grammar, try: ' : 'Grammar, weakest: ') + nextG[1], () => startGrammar([nextG[0]], 10)) : null,
             tr.length ? act('Practise trouble words (' + tr.length + ')', () => go('vocab', Review(tr.map((a) => a.id), false))) : null),
           tr.length ? h('div.words', { lang: 'fr' }, tr.map((a) => h('span', null, a.id))) : null),
