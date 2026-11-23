@@ -828,7 +828,6 @@ function startGrammar(topics, len, words) {
 // A worksheet like the class handouts: every part at once, type all the answers, then check the whole sheet.
 function Sheet() {
   const items = [];
-  let done = false;
   const score = h('span.muted');
   // Full quiz (every part) or one part on its own, twice as long.
   const only = store.get('sheetPart', '');
@@ -846,21 +845,28 @@ function Sheet() {
         return h('li', null, h('div.' + (q.showLang === 'fr' ? 'fr' : 'en-q'), { lang: q.showLang }, q.show), inp, out);
       })));
   });
-  // Enter moves down the sheet; Enter in the last box checks it.
-  items.forEach(({ inp }, i) => inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); if (items[i + 1]) items[i + 1].inp.focus(); else grade(); } }));
+  // Enter checks that question and moves to the next one still open; the button checks whatever is left.
+  let checked = 0, right = 0;
+  function gradeOne(it) {
+    if (it.done) return;
+    it.done = true; checked++;
+    const { q, inp, out } = it, r = check(q, inp.value);
+    inp.readOnly = true; inp.classList.add(r.ok ? 'ok' : 'no'); (r.ok ? pop : shake)(inp);
+    record(q, r.ok);
+    if (r.ok) right++;
+    else out.replaceChildren(diff(q.answers[0], inp.value, false), h('p.note', null, r.accent ? h('b', null, 'Accent missing. ') : null, q.why));
+    score.textContent = right + ' / ' + checked + ' right' + (checked < items.length ? ' so far' : '');
+    if (checked === items.length) { checkBtn.hidden = true; renderNav(); }
+  }
+  items.forEach((it, i) => it.inp.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    if (it.inp.value.trim()) gradeOne(it);
+    const nxt = items.slice(i + 1).concat(items.slice(0, i)).find((x) => !x.done);
+    if (nxt) nxt.inp.focus();
+  }));
   function grade() {
-    if (done) return;
-    done = true;
-    let right = 0;
-    items.forEach(({ q, inp, out }) => {
-      const r = check(q, inp.value);
-      inp.readOnly = true; inp.classList.add(r.ok ? 'ok' : 'no');
-      record(q, r.ok);
-      if (r.ok) right++;
-      else out.replaceChildren(diff(q.answers[0], inp.value, false), h('p.note', null, r.accent ? h('b', null, 'Accent missing. ') : null, q.why));
-    });
-    score.textContent = right + ' / ' + items.length + ' right';
-    checkBtn.hidden = true; renderNav();
+    items.forEach(gradeOne);
     const first = items.find((x) => x.inp.classList.contains('no'));
     (first ? first.inp : score).scrollIntoView({ behavior: still() ? 'auto' : 'smooth', block: 'center' });
   }
@@ -870,7 +876,7 @@ function Sheet() {
   setTimeout(() => items[0] && items[0].inp.focus(), 60);
   return h('div', null,
     h('h1', null, 'Quiz'),
-    h('p.lede', null, 'A quiz like the class handouts, with new questions every time. Fill in every answer, then check it: mistakes show the right answer and the rule.'),
+    h('p.lede', null, 'A quiz like the class handouts, with new questions every time. Press Enter to check each answer as you go, or fill them all in and check at the end: mistakes show the right answer and the rule.'),
     picker, bar, h('div.stack', null, parts), h('div.row', { style: 'margin-top:1.2rem' }, checkBtn));
 }
 
