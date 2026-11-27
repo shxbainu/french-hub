@@ -956,7 +956,7 @@ function remindFor(q) {
 function Rules() {
   const el = h('div.rules', null, Object.values(RULES).map((r) => r()));
   [...el.children].forEach((c, i) => fadeUp(c, 50 * i));
-  return h('div', null, h('h1', null, 'Rules'), h('p.lede', null, 'Grammar from the Leçon 3A1 notes.'), el);
+  return h('div', null, h('h1', null, 'Rules'), h('p.lede', null, 'Grammar from the Leçon 3A1 and 3B notes.'), el);
 }
 
 /* ---------- dashboard ---------- */
