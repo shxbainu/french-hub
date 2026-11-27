@@ -447,7 +447,7 @@ window.addEventListener('hashchange', () => go(location.hash.slice(1)));
 window.addEventListener('keydown', (e) => { if (keyHandler && !e.metaKey && !e.ctrlKey && !e.altKey) keyHandler(e); });
 
 /* ---------- one question card ---------- */
-const KIND = { 'fr-en': 'French → English', 'en-fr': 'English → French', forms: 'One form', all: 'All forms', sent: 'Sentence', phrase: 'Phrase', place: 'Word order', bel: 'bel · nouvel · vieil', de: 'de or des', hair: 'Hair', gender: 'Noun gender', trap: 'Trap' };
+const KIND = { 'fr-en': 'French → English', 'en-fr': 'English → French', forms: 'One form', all: 'All forms', sent: 'Sentence', phrase: 'Phrase', place: 'Word order', bel: 'bel · nouvel · vieil', de: 'de or des', hair: 'Hair', gender: 'Noun gender', trap: 'Trap', cest: 'Il est / c’est' };
 const SHORT = { 'masculine singular': 'masc.', 'feminine singular': 'fem.', 'masculine plural': 'masc. pl.', 'feminine plural': 'fem. pl.', 'before a vowel': 'before a vowel' };
 const textInput = (lang, id, extra) => h('input.answer' + (lang === 'fr' ? '.fr' : ''), { type: 'text', id, autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', lang, ...extra });
 // Accent buttons type into whichever box was last focused.
@@ -928,6 +928,11 @@ const RULES = {
     ex([['He is black-haired.', 'Il est brun.'], ['She is brown-haired.', 'Elle est châtain.'], ['They are blond.', 'Ils sont blonds.'], ['They (f.) are red-haired.', 'Elles sont rousses.']]),
     h('p', null, h('span.fr', { lang: 'fr' }, 'Les cheveux'), ' is always masculine plural, even for a girl:'),
     ex([['He has black hair.', 'Il a les cheveux bruns.'], ['She has brown hair.', 'Elle a les cheveux châtains.'], ['She has red hair.', 'Elle a les cheveux roux.']])),
+  cest: () => card('Il est or c’est? (jobs)',
+    h('p', null, 'Two ways to say “he is a teacher”: ', h('b', null, 'Il est professeur'), ' (no article) or ', h('b', null, 'C’est un professeur'), ' (with article).'),
+    h('p', null, 'With an adjective, ', h('b', null, 'only C’est un / une'), ':'),
+    ex([['He is a good teacher.', 'C’est un bon professeur.'], ['She is an intellectual doctor.', 'C’est un médecin intellectuel.'], ['She is a lawyer.', 'Elle est avocate. / C’est une avocate.']]),
+    h('p.note', null, 'Jobs ending in -e don’t change (un / une architecte). Others do: avocat → avocate, musicien → musicienne, coiffeur → coiffeuse. médecin is always masculine.')),
 };
 // One-line reminders of the rules that trip people up, shown on the dashboard and on the cards they apply to.
 const REMIND = {
@@ -937,9 +942,10 @@ const REMIND = {
   agree: ['Agreement', '+e for feminine, +s for plural. Already ends in -e: no extra -e. -s / -x words add no -s. -ien → -ienne. Marron never changes.'],
   hair: ['Les cheveux', 'Les cheveux is masculine plural, even for a girl: elle a les cheveux longs (not longues). My hair is… = mes cheveux sont… (never mon cheveu est).'],
   colors: ['Hair colour ≠ colour', 'Brown hair = châtain (les cheveux châtains); a brown thing = marron (une chaise marron). brun / châtain / blond / roux are only for hair and people.'],
+  cest: ['C’est + adjective', 'He is a teacher = Il est professeur or C’est un professeur. With an adjective, only C’est: c’est un bon professeur.'],
   gender: ['l’ hides the gender', 'Learn l’ nouns with un / une: un homme, un oiseau, un appartement, une école, une histoire.'],
 };
-const REMIND_OF = { sent: ['agree', 'before'], phrase: ['before', 'de', 'bel'], place: ['before'], bel: ['bel'], de: ['de'], hair: ['hair', 'colors'], gender: ['gender'], trap: ['hair', 'colors'] };
+const REMIND_OF = { sent: ['agree', 'before'], phrase: ['before', 'de', 'bel'], place: ['before'], bel: ['bel'], de: ['de'], hair: ['hair', 'colors'], gender: ['gender'], trap: ['hair', 'colors'], cest: ['cest'] };
 function remindFor(q) {
   const a = byId[q.word];
   const keys = REMIND_OF[q.topic] || (a && a.before ? (a.alt && q.topic === 'all' ? ['bel'] : ['before']) : []);

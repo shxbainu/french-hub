@@ -116,3 +116,18 @@ assert.ok(seen('trap', /^sont$/));
 assert.ok(check({ lang: 'fr', answers: ['bruns', 'noirs'] }, 'noirs').ok);
 
 console.log('ok');
+
+// Leçon 3B: forms from the sheet, professions, and the c'est / il est drill.
+assert.deepEqual(FR.byId.génial.f, ['génial', 'géniale', 'géniaux', 'géniales']);
+assert.deepEqual(FR.byId.inquiet.f, ['inquiet', 'inquiète', 'inquiets', 'inquiètes']);
+assert.deepEqual(FR.byId.fou.f, ['fou', 'folle', 'fous', 'folles']);
+assert.deepEqual(FR.byId.favori.f, ['favori', 'favorite', 'favoris', 'favorites']);
+assert.deepEqual(FR.byId.pénible.f, ['pénible', 'pénible', 'pénibles', 'pénibles']);
+assert.deepEqual(FR.byId["homme d'affaires"].f, ["homme d'affaires", "femme d'affaires", "hommes d'affaires", "femmes d'affaires"]);
+assert.deepEqual(FR.byId.médecin.f, ['médecin', 'médecin', 'médecins', 'médecins']);
+for (let i = 0; i < 400; i++) {
+  const x = Q.cest();
+  if (x.answers.length === 1) assert.ok(/^C'est (un|une) /.test(x.answers[0]), x.answers[0]); // with an adjective: only c'est
+  if (x.word === 'médecin') assert.ok(!x.answers.some((a) => a.includes('une ')), 'médecin stays masculine');
+}
+for (let i = 0; i < 400; i++) assert.notEqual(Q.two().word && FR.byId[Q.two().word].group, 'job'); // jobs never used as adjectives

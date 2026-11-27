@@ -65,10 +65,47 @@
       const note = fem.endsWith('nne') ? '-en → -enne: add -ne for the feminine.' : w.endsWith('s') ? 'Ends in -s: no extra -s in the masculine plural.' : w === 'russe' ? 'Already ends in -e: same for masculine and feminine.' : undefined;
       return A(w, f, en, 'nat', { note });
     }),
+    // Étude du vocabulaire 3B: more adjectives (personality, mood) and professions. All go after the noun.
+    ...[
+      ['gentil', ['gentil', 'gentille', 'gentils', 'gentilles'], ['gentle', 'kind', 'nice'], 'pa', '-il → -ille: the l doubles.'],
+      ['cruel', ['cruel', 'cruelle', 'cruels', 'cruelles'], ['cruel'], 'pa', '-el → -elle: the l doubles.'],
+      ['génial', ['génial', 'géniale', 'géniaux', 'géniales'], ['great', 'brilliant'], 'pt', '-al → -aux in the masculine plural: géniaux (but géniales).'],
+      ['sportif', ['sportif', 'sportive', 'sportifs', 'sportives'], ['athletic', 'sporty'], 'p', '-f → -ve: sportive.'],
+      ['actif', ['actif', 'active', 'actifs', 'actives'], ['active'], 'pa', 'Same pattern as sportif: -f → -ve.'],
+      ['doux', ['doux', 'douce', 'doux', 'douces'], ['sweet', 'gentle', 'soft'], 'pa', 'doux → douce. Ends in -x: no extra -s in the masculine plural. Sweet as in personality.'],
+      ['pénible', null, ['tiresome', 'annoying'], 'pt'],
+      ['modeste', null, ['modest', 'humble'], 'p'], ['faible', null, ['weak'], 'pa'], ['antipathique', null, ['unlikeable', 'mean'], 'p'],
+      ['rapide', null, ['fast', 'quick'], 'pat'], ['drôle', null, ['funny'], 'pt'], ['triste', null, ['sad'], 'pt'],
+      ['courageux', ['courageux', 'courageuse', 'courageux', 'courageuses'], ['brave', 'courageous'], 'pa', '-eux → -euse. No extra -s in the masculine plural.'],
+      ['ennuyeux', ['ennuyeux', 'ennuyeuse', 'ennuyeux', 'ennuyeuses'], ['boring', 'annoying'], 'pt', 'Same pattern as courageux: -eux → -euse.'],
+      ['jaloux', ['jaloux', 'jalouse', 'jaloux', 'jalouses'], ['jealous'], 'pa', 'Same pattern as courageux: -x → -se.'],
+      ['paresseux', ['paresseux', 'paresseuse', 'paresseux', 'paresseuses'], ['lazy'], 'pa', 'Same pattern as courageux: -eux → -euse.'],
+      ['inquiet', ['inquiet', 'inquiète', 'inquiets', 'inquiètes'], ['worried'], 'p', '-et → -ète: inquiète (grave accent).'],
+      ['secret', ['secret', 'secrète', 'secrets', 'secrètes'], ['secretive', 'discreet'], 'pt', 'Same pattern as inquiet: -et → -ète.'],
+      ['fou', ['fou', 'folle', 'fous', 'folles'], ['crazy'], 'pa', 'fou → folle (irregular).'],
+      ['favori', ['favori', 'favorite', 'favoris', 'favorites'], ['favorite'], 'at', 'favori → favorite: add -te.'],
+      ['méchant', null, ['mean'], 'pa'], ['fort', null, ['strong'], 'pa'], ['prêt', null, ['ready'], 'p'], ['fatigué', null, ['tired'], 'pa'],
+    ].map(([w, f, en, on, note]) => {
+      const same = w.endsWith('e');
+      f = f || (same ? [w, w, w + 's', w + 's'] : [w, w + 'e', w + 's', w + 'es']);
+      return A(w, f, en, 'adj3b', { lesson: '3B', on, note: note || (same ? 'Already ends in -e: same for masculine and feminine.' : undefined) });
+    }),
+    // Professions. on: '' keeps them out of the adjective drills; they're drilled in the c'est / il est drill and the vocab.
+    ...[
+      ['architecte', ['architect']], ['dentiste', ['dentist']], ['artiste', ['artist']], ['journaliste', ['journalist']], ['athlète', ['athlete']],
+      ['avocat', ['lawyer'], 'avocate'], ['musicien', ['musician'], 'musicienne', '-ien → -ienne.'], ['coiffeur', ['hairdresser'], 'coiffeuse', '-eur → -euse.'],
+      ['ingénieur', ['engineer'], 'ingénieure', '-eur → -eure here: une ingénieure.'], ['travailleur', ['worker', 'hardworking'], 'travailleuse', '-eur → -euse.'],
+      ["homme d'affaires", ['businessman', 'businesswoman', 'business person'], "femme d'affaires", "homme → femme: une femme d'affaires."],
+      ['médecin', ['doctor'], 'médecin', 'Always masculine, even for a woman: elle est médecin, c’est un médecin.'],
+    ].map(([w, en, fem, note]) => {
+      const pl = (x) => x.replace(/^(\S+)/, '$1s'); // homme d'affaires → hommes d'affaires
+      const f = [w, fem || w, pl(w), pl(fem || w)];
+      return A(w, f, en, 'job', { lesson: '3B', on: '', note: note || (fem ? undefined : 'Ends in -e: same word for a man or a woman (un / une ' + w + ').') });
+    }),
   ];
   // One entry per handout. New lessons: add here and tag their words with lesson: '<id>'.
-  const LESSONS = [{ id: '3A1', title: 'Leçon 3A1', sub: 'Les adjectifs descriptifs' }];
-  const GROUPS = { desc: 'Descriptive adjectives', irr: 'Irregular adjectives', bags: 'Also on the “before” list', cog: 'Cognates', nat: 'Nationalities' };
+  const LESSONS = [{ id: '3A1', title: 'Leçon 3A1', sub: 'Les adjectifs descriptifs' }, { id: '3B', title: 'Leçon 3B', sub: 'Adjectifs et professions' }];
+  const GROUPS = { desc: 'Descriptive adjectives', irr: 'Irregular adjectives', bags: 'Also on the “before” list', cog: 'Cognates', nat: 'Nationalities', adj3b: 'More adjectives (3B)', job: 'Professions (3B)' };
   const SLOT = ['masculine singular', 'feminine singular', 'masculine plural', 'feminine plural'];
   const BEFORE = ['beau', 'bon', 'grand', 'gros', 'jeune', 'joli', 'long', 'mauvais', 'nouveau', 'petit', 'vieux'];
 
@@ -113,11 +150,11 @@
   const VOCAB = [['fr-en', 'Meaning: French → English'], ['en-fr', 'Meaning: English → French'], ['forms', 'One form'], ['all', 'All four forms']];
   const GRAMMAR = [
     ['sent', 'Sentences'], ['phrase', 'Write the phrase'], ['place', 'Before or after the noun?'],
-    ['bel', 'bel, nouvel, vieil'], ['de', 'de or des?'], ['hair', 'Hair'], ['gender', 'Noun gender (l’ words)'], ['trap', 'Traps'],
+    ['bel', 'bel, nouvel, vieil'], ['de', 'de or des?'], ['hair', 'Hair'], ['gender', 'Noun gender (l’ words)'], ['trap', 'Traps'], ['cest', 'Il est or c’est? (jobs)'],
   ];
   const TOPICS = VOCAB.concat(GRAMMAR);
   // Which rule cards to show beside each grammar drill (ids of the cards on the Rules page).
-  const RULE_OF = { sent: ['agree', 'before'], phrase: ['before', 'agree'], place: ['before'], bel: ['bel'], de: ['de'], hair: ['hair'], gender: ['gender'], trap: ['colors', 'hair'] };
+  const RULE_OF = { sent: ['agree', 'before'], phrase: ['before', 'agree'], place: ['before'], bel: ['bel'], de: ['de'], hair: ['hair'], gender: ['gender'], trap: ['colors', 'hair'], cest: ['cest'] };
 
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
   // focus: word ids to drill (trouble words); falls back to every word when none fit the question.
@@ -284,7 +321,7 @@
   // Two adjectives on one noun: the BAGS one (at most one) goes before, the rest after, joined by et.
   function twoAdj() {
     const n = pick(NOUNS), pl = Math.random() < 0.4, slot = slotOf(n.g, pl), noun = pl ? n.pl : n.sg;
-    const fit = pool((x) => x.id !== 'raide' && fitsPred(x, n));
+    const fit = pool((x) => x.id !== 'raide' && x.group !== 'job' && fitsPred(x, n));
     let a, b;
     do { a = pick(fit); b = pick(fit); } while (a === b || (a.before && b.before) || (a.hair && b.hair) || (a.group === 'nat' && b.group === 'nat'));
     const bef = [a, b].find((x) => x.before), aft = [a, b].filter((x) => !x.before);
@@ -355,6 +392,23 @@
     },
   ];
   Object.assign(Q, {
+    // He is a lawyer: Il est avocat (no article) or C'est un avocat. With an adjective, only C'est un bon avocat.
+    cest() {
+      const j = pick(pool((x) => x.group === 'job')), fem = Math.random() < 0.5, g = fem && j.id !== 'médecin' ? 'f' : 'm';
+      const noun = j.f[fem ? 1 : 0], art = g === 'f' ? 'une' : 'un', enJob = j.en[0] === 'businessman' && fem ? 'businesswoman' : j.en[0];
+      const an = (w) => (/^[aeiou]/i.test(w) ? 'an ' : 'a ') + w;
+      const base = { topic: 'cest', word: j.id, ask: 'Write it in French', showLang: 'en', lang: 'fr', hint: 'Is there an adjective? Then only C’est un / une…' };
+      const tip = j.id === 'médecin' ? ' médecin is always masculine: un médecin, even for a woman.' : '';
+      if (Math.random() < 0.5) {
+        const both = (fem ? 'Elle' : 'Il') + ' est ' + noun + '.', c = "C'est " + art + ' ' + noun + '.';
+        return { ...base, show: (fem ? 'She' : 'He') + ' is ' + an(enJob) + '.', answers: [both, c], full: both + ' / ' + c, en: (fem ? 'She' : 'He') + ' is ' + an(enJob) + '.',
+          why: 'No adjective: two ways. ' + (fem ? 'Elle' : 'Il') + ' est + job with no article, or C’est ' + art + ' + job.' + tip };
+      }
+      const a = pick(pool((x) => x.on.includes('p') && x.group !== 'job' && x.group !== 'nat' && !x.hair));
+      const form = formFor(a, { g, v: /^[aeiouéèh]/.test(noun) }, false), fr = "C'est " + art + ' ' + (a.before ? form + ' ' + noun : noun + ' ' + form) + '.';
+      return { ...base, show: (fem ? 'She' : 'He') + ' is ' + an(a.en[0] + ' ' + enJob) + '.', answers: [fr], full: fr, en: (fem ? 'She' : 'He') + ' is ' + an(a.en[0] + ' ' + enJob) + '.',
+        why: 'With an adjective, only C’est ' + art + '… (never ' + (fem ? 'Elle' : 'Il') + ' est ' + art + '…). ' + whyPlace(a) + ' ' + a.id + ' agrees with ' + noun + ': ' + form + '.' + tip };
+    },
     trap() {
       const t = pick(TRAPS)();
       return { topic: 'trap', word: t.word, ask: 'Fill in the blank', show: t.show, showLang: 'fr', lang: 'fr', answers: t.ans, why: t.why, hint: t.hint,
